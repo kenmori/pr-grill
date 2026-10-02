@@ -1,63 +1,63 @@
-# レビュアーレンズ
+# Reviewer lenses
 
-変更に関係するレンズだけ使う。各レンズの質問例は「型」であり、そのまま貼らず差分に合わせて具体化する。
+Use only the lenses the change touches. The example questions are templates: adapt them to the diff instead of pasting them.
 
-## 目次
-1. 目的・スコープ 2. 正しさ・エッジケース 3. 設計・責務 4. テスト 5. 型・API 契約
-6. パフォーマンス 7. セキュリティ 8. 運用・障害 9. 互換性・移行 10. UI/UX 11. 非エンジニア(PM/経営)
+## Index
+1. Purpose & scope 2. Correctness & edge cases 3. Design & responsibility 4. Tests 5. Types & API contracts
+6. Performance 7. Security 8. Operations & incidents 9. Compatibility & migration 10. UI/UX 11. Non-engineers (PM / leadership)
 
-## 1. 目的・スコープ
-- なぜ今この変更が必要? Issue / 背景は?
-- この PR に含まれる無関係な変更は? 分けられない?
-- 何をあえてやっていない?(スコープ外の明示)
+## 1. Purpose & scope
+- Why now? Which issue or background?
+- What unrelated changes are in this PR? Can they be split out?
+- What was deliberately left out? (explicit out-of-scope)
 
-## 2. 正しさ・エッジケース
-- null/undefined/空配列/0/負数/巨大入力のとき?
-- 並行実行・二重送信・リトライ時に壊れない?
-- タイムゾーン・日付境界・ロケール
-- エラー時に途中状態が残らない?
+## 2. Correctness & edge cases
+- null/undefined/empty/0/negative/huge input?
+- Concurrency, double submit, retries?
+- Time zones, date boundaries, locales
+- Partial state left behind on error?
 
-## 3. 設計・責務
-- この処理はこの層/ファイルに置くべき?
-- 既存の似た仕組みを使わず新規に作った理由は?(却下案台帳と連動)
-- 抽象化は早すぎ? 逆にコピペが増えていない?
+## 3. Design & responsibility
+- Does this belong in this layer / file?
+- Why build new instead of using the existing similar mechanism? (ties to the rejected-alternatives ledger)
+- Premature abstraction? Or growing copy-paste?
 
-## 4. テスト
-- テストが無い/変わっていない理由は?
-- テストは実装ではなく振る舞いを検証している?
-- 失敗するはずのケースを本当に失敗させたことがある?
-- CI・ローカルのチェック(lint / typecheck / test)は実行した?
+## 4. Tests
+- Why are there no / no changed tests?
+- Do the tests check behaviour rather than implementation?
+- Has a case that should fail actually been seen failing?
+- Were CI and local checks (lint / typecheck / tests) run?
 
-## 5. 型・API 契約
-- 公開型/関数シグネチャの変更は呼び出し元すべてに反映済み?(要約の `← 差分外` を見る)
-- `as` / `any` / non-null assertion を使った箇所の安全性根拠は?
-- API レスポンス・DB スキーマの形が変わる? クライアントは追従している?
+## 5. Types & API contracts
+- Are public type / signature changes reflected at every call site? (check `← outside diff` in the summary)
+- Why is each `as` / `any` / non-null assertion safe?
+- Does the API response or DB schema change shape? Are clients updated?
 
-## 6. パフォーマンス
-- ループ内の I/O・N+1・不要な再レンダリング
-- データ量が 100 倍になったら?
-- バンドルサイズへの影響(新規依存の追加)
+## 6. Performance
+- I/O inside loops, N+1, unnecessary re-renders
+- What happens at 100× the data?
+- Bundle size impact of new dependencies
 
-## 7. セキュリティ
-- 入力検証・認可チェックはサーバー側にある?
-- ログに個人情報やトークンが出ない?
-- 新規依存のメンテ状況・ライセンス
+## 7. Security
+- Input validation and authorization on the server side?
+- No PII or tokens in logs?
+- Maintenance status and license of new dependencies
 
-## 8. 運用・障害
-- 問題が起きたらどうやって気付く?(ログ・メトリクス)
-- フィーチャーフラグで止められる? ロールバック手順は?
-- データ移行を伴うなら戻せる?
+## 8. Operations & incidents
+- How will anyone notice a problem? (logs, metrics)
+- Feature flag to switch it off? Rollback procedure?
+- If there is a data migration, is it reversible?
 
-## 9. 互換性・移行
-- 古いクライアント・キャッシュ・既存データとの互換性
-- デプロイ順序の制約(DB → API → フロント など)
+## 9. Compatibility & migration
+- Old clients, caches, existing data
+- Deploy-order constraints (DB → API → frontend …)
 
 ## 10. UI/UX
-- ローディング・エラー・空状態の表示
-- アクセシビリティ(キーボード操作、ラベル)
-- モバイル幅
+- Loading, error and empty states
+- Accessibility (keyboard, labels)
+- Narrow viewports
 
-## 11. 非エンジニア(PM/経営)
-- ユーザーから見て何が変わる?
-- リスクは? いつリリースできる?
-- 専門用語なしで一文で説明すると?
+## 11. Non-engineers (PM / leadership)
+- What changes for the user?
+- What is the risk? When can it ship?
+- One sentence, no jargon?

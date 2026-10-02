@@ -1,33 +1,33 @@
-# PR QA: <ブランチ名 / PR タイトル>
+# PR QA: <branch / PR title>
 
-## 一文要約
+## One-sentence summary
 
-## ⚠ 最優先(秘密情報・未更新の呼び出し元・未追跡ファイル)
+## ⚠ Top priority (secrets · callers outside the diff · untracked files)
 
-## 変更の地図
-### 本質的変更
-### 付随変更
-### ⚠ 意図不明な変更(PR 前に要判断)
+## Change map
+### Essential changes
+### Incidental changes
+### ⚠ Unexplained changes (decide before opening the PR)
 
-## 振る舞いの差分(Before → After)
+## Behaviour diff (Before → After)
 
-## 影響範囲(Blast Radius)
+## Blast radius
 
-## ほぼ確実に聞かれる 3 問
+## The 3 questions you will almost certainly get
 
-## 想定問答(優先度順)
-### Q1. <質問> — <レンズ> / <ファイル:行>
-**A.** <回答案> `[コード根拠|推測|作者確認|作者回答|作者承認]`
+## Expected Q&A (by priority)
+### Q1. <question> — <lens> / <file:line>
+**A.** <draft answer> `[code|guess|ask author|author|approved]`
 
-## 独自チェック
-- 説明責任チェック:
-- Revert 思考実験:
-- 却下案台帳:
-- 深夜障害テスト:
-- PR 説明文の整合性 / 意図しない約束:
-- 未実行チェック:
-- レビュアー予測(CODEOWNERS / reviewRequests は `[コード根拠]`、過去作者は `[推測]`):
+## Extra checks
+- Accountability check:
+- Revert thought experiment:
+- Rejected-alternatives ledger:
+- 3 a.m. incident test:
+- PR description consistency / unintended promises:
+- Unexecuted checks:
+- Reviewer prediction (CODEOWNERS / reviewRequests are `[code]`; past authors are `[guess]`):
 
-## 30 秒説明
+## 30-second explanation
 
-## ❓ 作者確認が必要な質問(決定木の根から順)
+## ❓ Questions for the author (root of the decision tree first)

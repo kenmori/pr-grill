@@ -1,34 +1,34 @@
-# Drill モード(口頭試問)
+# Drill mode (oral exam)
 
-作者の理解度を実際に試し、答えられない箇所を見つける。レビュー本番の予行演習。
+Test how well the author actually understands the change and find what they cannot answer. A rehearsal for the real review.
 
-## 進め方
-1. Step 1〜3 を内部で実施し、問題を 5〜10 問用意する(まだ見せない)
-   - 少なくとも 1 問は「この行が無いと何が壊れる?」型(説明責任チェック)
-   - 少なくとも 1 問は「なぜ X ではなく Y?」型(却下案)
-   - 1 問は非エンジニア向けに一文で説明させる
-   - 各問題に、Claude が持っている答えの種類を付けておく: **事実問題**(`[コード根拠]` で答えが決まる)か **意図問題**(`[作者確認]`、答えは作者しか知らない)か
-2. **1 問ずつ**出す。答えを待つ。まとめて出さない(答えを先に見せると試験にならない)
-3. 回答を評価する。評価の仕方は問題の種類で変わる:
+## Procedure
+1. Run Steps 1–3 internally and prepare 5–10 questions (do not show them yet).
+   - At least one "what breaks without this line?" question (accountability check).
+   - At least one "why X and not Y?" question (rejected alternative).
+   - One "explain it in one sentence to a non-engineer".
+   - Tag each question with the kind of answer Claude holds: a **fact question** (settled by `[code]`) or an **intent question** (`[ask author]`; only the author knows).
+2. Ask **one at a time** and wait. Never batch (showing answers ahead defeats the exam).
+3. Evaluate the answer. How depends on the kind of question:
 
-   **事実問題**(何が変わるか・何が壊れるか・呼び出し元はどこか):
-   - ◎ 根拠付きで正確 / ○ 方向性は正しいが根拠が曖昧 / △ 一部誤り / × 答えられない or 誤り
-   - コードと矛盾する回答は、該当ファイル:行を示して率直に指摘する。甘く採点しない
-   - **× や △ を付ける前に、該当箇所を必ず読み直す。** Claude 側の読み違いで作者を誤採点するのが最悪の結果。読み直して自分が間違っていたら、その問題は無効にして謝る
-   - △× のときは正解を教える前に一度だけヒントを出す
+   **Fact questions** (what changes, what breaks, who calls this):
+   - ◎ accurate with evidence / ○ right direction, weak evidence / △ partly wrong / × cannot answer, or wrong
+   - When an answer contradicts the code, point at file:line and say so plainly. Do not grade softly.
+   - **Before giving × or △, re-read the relevant lines.** The worst outcome is Claude misreading the code and marking the author wrong. If the re-read shows Claude was wrong, void the question and say so.
+   - On △/×, give one hint before revealing the answer.
 
-   **意図問題**(なぜ必要か・なぜこの方式か・なぜ X ではなく Y):
-   - 正誤は付けない。作者の答えが正解であり、Claude に正解はない
-   - 評価するのは **(a) 答えがコードと整合しているか**(「性能のため」と言うがコードは性能に効いていない、など)と **(b) 根拠が言えているか**(「なんとなく」「前からそう」は根拠ではない)
-   - 整合しない場合は「でも ファイル:行 では〜になっている」と矛盾を示す。根拠がない場合はその節点を Grill 候補として記録する
-4. 終了時にまとめ:
-   - 事実問題の点数と、弱点の傾向(例: エラー系の理解が薄い、型の意図を説明できない)
-   - 意図問題で根拠が言えなかった節点の一覧 → Grill モードへの導線
-   - × だった箇所 = PR を出す前にコードを読み直すべき箇所のリスト
-   - 答えられなかった理由が「コード自体が分かりにくい」なら、PR 内でのコメント追加・リファクタ候補として提示
+   **Intent questions** (why needed, why this approach, why X not Y):
+   - No right/wrong. The author's answer is the truth; Claude has no answer key.
+   - Evaluate **(a) consistency with the code** ("for performance", but the code does nothing for performance) and **(b) whether a reason was given at all** ("just because", "it was always like this" are not reasons).
+   - On inconsistency, show the contradiction ("but file:line does Y"). On a missing reason, record the node as a Grill candidate.
+4. Wrap-up:
+   - Score on the fact questions and the weak-spot pattern (e.g. error paths are hazy, cannot explain the types).
+   - Intent questions without a reason → the hand-off list for Grill.
+   - Every × is a place to re-read before opening the PR.
+   - If the author could not answer because the code itself is hard to read, list it as a comment/refactor candidate inside the PR.
 
-## 難易度
-ユーザーが指定しなければ「普通」。
-- やさしい: 何を変えたか中心
-- 普通: なぜ・エッジケース中心
-- 鬼: 却下案・障害時・100 倍スケールなど、シニアレビュアーが聞く質問中心
+## Difficulty
+"Normal" unless the user says otherwise.
+- Easy: what changed.
+- Normal: why, and edge cases.
+- Brutal: rejected alternatives, incident behaviour, 100× scale — the questions a senior reviewer asks.

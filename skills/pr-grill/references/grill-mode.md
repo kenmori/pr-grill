@@ -1,73 +1,73 @@
-# Grill モード(意図の掘り起こし)
+# Grill mode (surfacing intent)
 
-Matt Pocock の grill-me の考え方を PR 向けに適用したもの。
-`[作者確認]` の穴を、作者への**容赦ない 1 問ずつのインタビュー**で埋め、「レビューで何を聞かれても判断の根拠を言える」状態にする。
+Matt Pocock's grill-me idea applied to pull requests.
+Fill every `[ask author]` gap through a **relentless one-question-at-a-time interview**, until the author can state the reasoning behind every decision a reviewer might poke at.
 
-Drill との違い: Drill は理解度の**試験**なので答えを伏せる。Grill は判断の**言語化**が目的なので、Claude の仮説を叩き台として使って作者の思考を速くする。ただし仮説の出し方には下のルールがある。
+Difference from Drill: Drill is an **exam**, so answers stay hidden. Grill is about **putting judgement into words**, so Claude's hypotheses are used as a starting point to speed the author up — subject to the rules below.
 
-## 1. 決定木を組む(作者には見せず内部で)
-PR の設計判断を依存関係のある木にする。上流の答えが変わると下流の質問自体が変わるので、**必ず根から**解消する。
+## 1. Build the decision tree (internally; do not show it)
+Arrange the PR's design decisions as a dependency tree. An upstream answer changes the downstream questions, so **always resolve from the root**.
 
 ```
-根: なぜこの変更が必要か(問題・きっかけ)
-└ 成功の定義: 何が満たされれば完了か / 何をスコープ外にしたか
-  └ アプローチ選択: なぜこの方式か(却下案ごとに枝)
-    └ 個別の設計判断: 置き場所・データ構造・API 形・命名・依存追加 …
-      └ エッジケースの扱い方針
-        └ テスト方針: 何をテストし何をしないか
-          └ リリース: フラグ・移行・ロールバック・監視
+root: why is this change needed (problem, trigger)
+└ definition of done: what must hold for this to be complete / what was left out of scope
+  └ approach: why this way (one branch per rejected alternative)
+    └ individual decisions: placement, data structures, API shape, naming, new dependencies …
+      └ edge-case policy
+        └ test policy: what is tested, what deliberately is not
+          └ release: flags, migration, rollback, monitoring
 ```
-差分に関係しない枝は刈る。Step 1〜4 で既に `[コード根拠]` になった節点も飛ばす。
+Prune branches the diff does not touch. Skip nodes already settled as `[code]` in Steps 1–4.
 
-## 2. 1 問ずつ聞く
+## 2. Ask one question per turn
 
-### 仮説を先に出してはいけない節点
-**根(なぜ必要か)・成功の定義・却下案(なぜ X ではなく Y)** の 3 種は、Claude の仮説を添えずに聞く。
-理由: これらは作者の頭の中にしかない情報で、先に「もっともらしい理由」を見せると作者は「それで」と返してしまい、Claude が捏造した意図に作者がハンコを押す導線になる。これは大原則(意図を捏造しない)の正反対。
-作者が答えた**後**に、Claude の読みと食い違っていればその場で言う(「コードを読む限り〜に見えたが、違う?」)。
+### Nodes where you must NOT offer a hypothesis first
+**The root (why), the definition of done, and rejected alternatives (why X and not Y)** are asked without a suggested answer.
+Reason: these exist only in the author's head. Showing a plausible reason first invites a reflexive "yes, that" — Claude's fabricated intent then gets the author's stamp on it. That is the exact opposite of the core rule.
+**After** the author answers, if Claude's reading of the code disagrees, say so right there ("the code reads to me like X — is that wrong?").
 
-形式:
+Format:
 ```
-**Q<n>/<残り概算>** <質問> (関連: ファイル:行)
-```
-
-### それ以外の節点
-個別の設計判断・エッジケース・テスト・リリースは、コードと周辺状況から推奨回答を添えてよい。
-
-形式:
-```
-**Q<n>/<残り概算>** <質問> (関連: ファイル:行)
-推奨回答: <最も妥当と思う答え。根拠を一言>
+**Q<n>/<approx. remaining>** <question> (see: file:line)
 ```
 
-### 共通ルール
-- 1 ターン 1 問。まとめて聞かない(混乱し、浅い回答になる)
-- 聞く前に、環境で調べられることは調べ尽くす。調べた結果は質問や推奨回答の根拠に使う
-- 回答が曖昧・矛盾・コードと食い違う場合は、同じ節点を深掘りする(「つまり〜ということ? でも ファイル:行 では〜になっている」)。納得できるまで次へ進まない
-- 回答によって下流の枝が変わったら、木を組み替える
-- 作者の判断に疑問があれば率直に言う。ただし決めるのは作者。Claude は反論を 1 回述べたら作者の決定に従い、記録する
+### All other nodes
+Individual decisions, edge cases, tests and release may come with a suggested answer derived from the code and its surroundings.
 
-## 3. 回答のラベル付け
-- 作者が自分の言葉で答えた → `[作者回答]`。作者の言葉に近い形で整える(言い換えて意味を足さない)
-- 推奨回答に「それで」「合ってる」と同意しただけ → `[作者承認]`。推奨回答をそのまま記録し、**Claude の仮説だったことが分かる形**で残す
-- `[作者承認]` が続く節点は、締めで「自分の言葉で一言で言うと?」と 1 回だけ聞き直す。言えたら `[作者回答]` に昇格、言えなければレビューで突かれやすい箇所として残す
+Format:
+```
+**Q<n>/<approx. remaining>** <question> (see: file:line)
+Suggested: <the most plausible answer, with the evidence in a few words>
+```
 
-## 4. 毎回チェックポイント
-各回答のたびに `PR_QA.md` を更新する(中断しても失われないように):
-- 該当の想定問答を `[作者確認]` → `[作者回答]` / `[作者承認]` に変える
-- 新たに出た却下案・制約・既知の課題は該当セクションに追記
-- 末尾の「作者確認が必要な質問」から消し込む
+### Shared rules
+- One question per turn. Never batch (it confuses the author and yields shallow answers).
+- Before asking, exhaust what the environment can tell you. Use what you found as evidence in the question or the suggestion.
+- If an answer is vague, contradictory, or clashes with the code, stay on the same node ("so you mean X? but file:line does Y"). Do not move on until it holds together.
+- If an answer changes the downstream branches, rebuild the tree.
+- If you doubt a decision, say so plainly — once. Then the author decides; record their decision.
 
-## 5. 終了条件と締め
-次のどれかで終了する:
-- 決定木の全節点が `[コード根拠]` / `[作者回答]` / `[作者承認]` になった
-- 作者が「ここまで」と言った(未解消の節点を一覧で残す)
+## 3. Label the answers
+- The author answered in their own words → `[author]`. Tidy it close to their wording; do not add meaning.
+- The author only agreed with the suggestion ("yes", "that's it") → `[approved]`. Record the suggestion verbatim, **in a form that shows it was Claude's hypothesis**.
+- For nodes that stay `[approved]`, ask once at the end: "in one sentence, in your own words?" If they can, promote to `[author]`; if not, keep it listed as a soft spot reviewers will find.
 
-締めにやること(grill の知識を使える形に閉じる):
-1. 共有理解の要約を 5 行以内で示し、作者に「この理解で合っているか」を確認する。確認が取れるまで完了扱いにしない
-2. `[作者承認]` のままの節点に、上記 3. の聞き直しをする
-3. 掘り起こした内容の反映先を提案する(実行は作者の承認後):
-   - PR 説明文: 背景・却下案・スコープ外・リスクの追記案。`[作者承認]` の内容は作者の言葉で言い直してもらってから載せる
-   - コードコメント: 「なぜ」が非自明な箇所(作者が説明に時間を要した箇所が候補)
-   - CLAUDE.md / ADR: このリポジトリで今後も効く判断・規約
-4. 作者が答えに詰まった節点・`[作者承認]` のままの節点を、レビューで突かれやすい箇所として明示する
+## 4. Checkpoint after every answer
+Update `PR_QA.md` after each reply, so nothing is lost if the session stops:
+- Switch the matching Q&A entry from `[ask author]` to `[author]` / `[approved]`.
+- Append newly surfaced rejected alternatives, constraints and known issues to their sections.
+- Remove the item from the "questions for the author" list at the bottom.
+
+## 5. Ending
+Stop when either:
+- every node is `[code]`, `[author]` or `[approved]`, or
+- the author says "enough" (leave the unresolved nodes listed).
+
+Closing steps (turn the interview into something usable):
+1. Summarize the shared understanding in ≤ 5 lines and ask the author to confirm it. Not done until confirmed.
+2. Run the "in your own words" pass over anything still `[approved]` (section 3).
+3. Propose where the surfaced knowledge should land (apply only after the author agrees):
+   - PR description: background, rejected alternatives, out of scope, risks. Anything `[approved]` is restated by the author before it goes in.
+   - Code comments: where "why" is non-obvious (the spots the author struggled to explain are the candidates).
+   - CLAUDE.md / ADR: decisions and conventions that will keep applying in this repo.
+4. List the nodes the author stumbled on, and the ones still `[approved]`, as the places reviewers are most likely to push.

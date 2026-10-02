@@ -1,85 +1,84 @@
 ---
 name: pr-grill
-description: 自分の変更を PR に出す前・レビュー対応中に、作者自身が変更点を深く理解し、レビュアーから来そうな質問に根拠付きで即答できる状態を作るスキル。差分の要約、影響範囲の追跡、レビュアー視点別の想定問答、作者本人にしか答えられない設計判断を決定木に沿って1問ずつ掘り起こす Grill モード、口頭試問の Drill モード、レビューコメントへの返信支援、AI 生成コードの説明責任チェック、PR 説明文と差分の矛盾検出を行う。作者が「PR出す前に確認したい」「レビューで何聞かれる?」「この変更説明できるようにしたい」「PRの想定質問」「セルフレビュー」「レビュー対策」「詰めて」「PR を grill して」と言ったとき、または自分のブランチ・差分・PR番号を示して自分の変更の理解や説明の準備を求めたときは、明示的に頼まれていなくてもこのスキルを使うこと。他人の PR をレビューする側の依頼には使わない。
+description: Prepares the author of a pull request to explain and defend their own change, before opening the PR and while responding to review. Summarizes the diff, traces the blast radius, predicts reviewer questions by lens, separates what the code proves from what only the author knows, interviews the author one question at a time along a decision tree (Grill), runs an oral exam (Drill), drafts evidence-based replies to review comments (Reply), checks accountability for AI-generated hunks, and detects contradictions between the PR description and the diff. Use it, even when not asked explicitly, whenever the author says things like "check this before I open the PR", "what will reviewers ask?", "I want to be able to explain this change", "self-review", "PR prep", "grill my PR", "dig into my intent", or points at their own branch, diff or PR number and asks to understand or prepare to explain it. Do not use it when the user is reviewing someone else's PR.
 ---
 
-# pr-grill — 変更を「説明できる」状態にする
+# pr-grill — make the change explainable
 
-目的は PR を通すことではなく、**作者が自分の変更をどんな質問にも根拠付きで答えられる状態**にすること。
-レビュアーの時間を節約し、マージ後の障害対応で「なぜこう書いたか」を即答できるようにする。
+The goal is not to get the PR merged. It is to put the **author** in a state where they can answer any question about their change with evidence, so reviewers spend less time and the author can still say "why" six months later during an incident.
 
-対象は**作者本人**。他人の PR をレビューする側として呼ばれた場合はこのスキルの出番ではない(どうしても使うなら Step 1〜2 の変更の地図だけを出し、`[作者確認]` の掘り起こしはしない)。
-応答と `PR_QA.md` は**ユーザーが使っている言語**で書く(このファイルが日本語なのは関係ない)。
+The user is the **author**. If you are asked to review someone else's PR, this skill is not the tool (at most, produce the Change Map from Steps 1–2 and skip the `[ask author]` digging).
+Write replies and `PR_QA.md` in **the language the user is writing in**, translating the labels below accordingly.
 
-## 大原則: 「コードから言えること」と「作者にしか分からないこと」を混ぜない
+## Core rule: never mix "what the code says" with "what only the author knows"
 
-想定問答の答えは必ず次のラベルを付けて分類する。これがこのスキルの価値の核。
+Every answer in the Q&A gets exactly one label. This separation is the whole point of the skill.
 
-- `[コード根拠]` 差分・周辺コード・テスト・git 履歴から事実として言える(**ファイル:行** を添える)
-- `[推測]` コードから妥当に推測できるが確証はない(推測の根拠を一言添える)
-- `[作者確認]` 意図・トレードオフ・却下案など、作者の頭の中にしかない → 答えを確定させず作者に質問する
-- `[作者回答]` 作者が自分の言葉で答えた(Grill で `[作者確認]` から昇格)
-- `[作者承認]` Claude の仮説に作者が「それで合ってる」と同意しただけ(Grill で昇格。`[作者回答]` より弱い。理由は `references/grill-mode.md`)
+- `[code]` Provable from the diff, surrounding code, tests or git history. Always cite **file:line**.
+- `[guess]` A reasonable inference without proof. State the basis in a few words.
+- `[ask author]` Intent, trade-offs, rejected alternatives — things that exist only in the author's head. Do not settle these; ask.
+- `[author]` The author answered in their own words (promoted from `[ask author]` during Grill).
+- `[approved]` The author merely agreed with Claude's hypothesis (promoted during Grill). Weaker than `[author]`; see `references/grill-mode.md` for why.
 
-Claude がもっともらしい「意図」を捏造すると、作者はそれをレビューで口にして詰む。だから `[作者確認]` を推測で確定させないこと。
+If Claude fabricates a plausible "intent", the author will repeat it in review and get caught. So never resolve an `[ask author]` by guessing.
 
-逆に、**調べれば分かることは作者に聞かない**。呼び出し元、過去の経緯(`git log -p` / `git blame`)、テストの有無、設定値などは自分で確認してから `[コード根拠]` にする。作者の時間は「判断」の質問にだけ使う。
+Conversely, **never ask the author what you can look up.** Callers, history (`git log -p`, `git blame`), test coverage, config values: check them yourself and label them `[code]`. The author's time is for judgement calls only.
 
-## ワークフロー
+## Workflow
 
-### Step 0: モード判定
-ユーザーの発言から選ぶ。不明なら Brief を実行し、最後に他モードを1行で提示する。
+### Step 0: pick a mode
+Choose from what the user said. If unclear, run Brief and offer the other modes in one line at the end.
 
-| モード | 発言の例 | やること |
+| Mode | Example | What to do |
 |---|---|---|
-| Brief(既定) | 「PR出す前に確認したい」 | Step 1〜5 を通しで実施し `PR_QA.md` を出力。最後に Grill へ進むか聞く |
-| Grill(意図の掘り起こし) | 「詰めて」「意図を整理したい」「grill して」 | `references/grill-mode.md` を読んで実施。`[作者確認]` を決定木順に1問ずつ解消 |
-| Drill(口頭試問) | 「試験して」「理解度チェック」 | `references/drill-mode.md` を読んで実施 |
-| Reply(返信支援) | レビューコメントを貼られた / PR にレビューが付いた | `references/reply-mode.md` を読んで実施 |
+| Brief (default) | "check this before I open the PR" | Run Steps 1–5 and write `PR_QA.md`. End by asking whether to Grill. |
+| Grill (surface intent) | "grill me", "dig into the intent" | Read `references/grill-mode.md`. Resolve `[ask author]` items one per turn, in decision-tree order. |
+| Drill (oral exam) | "quiz me", "test my understanding" | Read `references/drill-mode.md`. |
+| Reply (review responses) | review comments pasted / a review landed on the PR | Read `references/reply-mode.md`. |
 
-「口頭で説明したい」「MTG で話す」と言われたら、Brief の「30秒説明」に加えて 3 分版の台本を作るだけでよい。
+If the user says they need to explain it out loud ("in the meeting", "to my lead"), add a 3-minute script next to Brief's 30-second summary. Nothing more.
 
-### Step 1: コンテキスト収集
-リポジトリ内で `scripts/collect_pr_context.sh [base-branch]` を実行する(git だけで動く。追加インストール不要。base 省略時は origin/HEAD → main → master の順で自動判定)。
+### Step 1: collect context
+Inside the repository, run `scripts/collect_pr_context.sh [base-branch]` (git only, no extra installs; base defaults to origin/HEAD → main → master).
 
-- stdout に要約が出る。同じ内容が `.claude/pr-grill/<ブランチ名>/summary.md` にも書かれる(このディレクトリは自動で `.git/info/exclude` に登録され、コミットされない)
-- 差分本体は 600 行以下なら stdout に含まれる。それより大きいと `diff/<path>.patch` にファイル別に分割されるので、**本質的変更のファイルから順に読む**。全部を一度に読もうとしない
-- 要約には次が含まれる: base の鮮度(古ければ `git fetch` を促す)、**未追跡ファイル**(差分に含まれていないので必ず別途読む)、コミット、統計、除外した生成物、テスト変更の有無、CODEOWNERS と過去作者、要注意パターンと**秘密情報らしき値**(file:line 付き)、変更されたシグネチャと**差分外の呼び出し元**、リポジトリのレビュー規約ファイル、レビュアーが「実行した?」と聞くチェックの一覧
-- 要約が「レビュー規約・テンプレート」を挙げていたら読む。想定問答はそのリポジトリの流儀に合わせる
+- The summary goes to stdout and to `.claude/pr-grill/<branch>/summary.md` (the directory is registered in `.git/info/exclude` automatically, so it is never committed).
+- The full diff is included in stdout only when it is ≤ 600 lines. Larger diffs are split per file under `diff/<path>.patch`: **read the essential files first**, never everything at once.
+- The summary contains: base freshness (warns when a `git fetch` is overdue), **untracked files** (not in the diff — read them separately), commits, stats, excluded generated files, whether tests changed, CODEOWNERS and past authors, suspicious patterns and **secret-shaped values** with file:line, changed signatures and **callers outside the diff**, the repo's review conventions, and the checks reviewers will ask whether you ran.
+- If the summary lists review conventions or a PR template, read them. The Q&A must follow that repository's customs.
 
-`gh` CLI が使える環境なら追加で `gh pr view --json title,body,reviewRequests,reviews` を取り、PR 説明文とレビュアーを得る。使えなくても続行する。
+When `gh` is available, also run `gh pr view --json title,body,reviewRequests,reviews` for the PR description and reviewers. Continue without it otherwise.
 
-### Step 2: 変更の地図(Change Map)
-以下を簡潔に作る。冗長な言い換えは不要。
-1. **一文要約**: この PR は何を何に変えるか
-2. **変更の分類**: 本質的変更 / 付随変更(リネーム・整形・型修正)/ 意図不明な変更 に分ける
-   - 「意図不明な変更」は特に重要: 要約の「要注意パターン」(デバッグ用ログ、`.only`、TODO、lint 抑制、ハードコードした接続先など)と、無関係ファイルの整形、コメントアウト残し、ハードコード値を列挙
-3. **振る舞いの差分**: Before → After を入出力・状態・副作用の観点で。コードの差分ではなく「挙動」の差分を書く
-4. **影響範囲(Blast Radius)**: 要約の「呼び出し元候補」を見て、変更が波及しうる箇所を列挙。`← 差分外` が付いた呼び出し元は**更新漏れの可能性**として必ず明示する(リネームや引数追加の見落としはここで出る)
+### Step 2: Change Map
+Keep it tight; no paraphrasing for its own sake.
+1. **One-sentence summary**: what this PR changes, from what to what.
+2. **Classification**: essential / incidental (renames, formatting, type fixes) / unexplained.
+   - "Unexplained" matters most: the summary's suspicious patterns (debug logging, `.only`, TODOs, lint suppressions, hard-coded hosts), formatting in unrelated files, leftover commented-out code, magic values.
+3. **Behaviour diff**: Before → After in terms of inputs, outputs, state and side effects. Describe behaviour, not code.
+4. **Blast radius**: from the summary's caller candidates, list where the change can propagate. Anything marked `← outside diff` is a **possible missed update** and must be called out explicitly (renames and added parameters surface here).
 
-### Step 3: 想定問答の生成
-`references/reviewer-lenses.md` を読み、変更内容に**関係するレンズだけ**選んで質問を作る。全レンズを機械的に埋めない。
-- 質問は実際のレビュアーが書きそうな口調で、具体的なファイル・行に紐付ける
-- 優先度順(聞かれる可能性 × 答えられないと痛い度)に並べ、上位 10〜15 問程度。**冒頭に「ほぼ確実に聞かれる 3 問」**を切り出す
-- 各質問に回答案と上記ラベルを付ける
+### Step 3: generate the Q&A
+Read `references/reviewer-lenses.md` and use **only the lenses that apply**. Do not fill every lens mechanically.
+- Phrase questions the way a real reviewer would, tied to concrete files and lines.
+- Order by (likelihood of being asked × pain of not answering); keep the top 10–15. **Pull out the 3 questions that will almost certainly be asked** at the top.
+- Give each question a draft answer and a label.
 
-### Step 4: 独自チェック群(既存ツールにない観点)
-変更に該当するものだけ実施する。
+### Step 4: checks other tools don't do
+Only the ones that apply.
 
-- **説明責任チェック(AI 生成コード対策)**: 差分のうち、ロジックが非自明な hunk を選び「この行が無いと何が壊れる?」を作者に問う候補として挙げる。作者が答えられない hunk は、理解せずに取り込んだ可能性が高い箇所
-- **Revert 思考実験**: 「明日この PR を revert したら何が壊れ、何が直る?」を書く。答えが曖昧なら PR の目的がぼやけているサイン
-- **却下案台帳**: この実装の明白な代替案を 2〜3 個挙げ、「なぜそうしなかったか」を `[作者確認]` として作者に問う。レビューで最も多く聞かれ、最も答えに詰まる類の質問
-- **深夜障害テスト**: 半年後、この箇所で障害が起きたとき on-call が知りたいこと(ログはどこに出るか、フラグで止められるか、データは戻せるか)
-- **PR 説明文の整合性**: 説明文があれば差分と突き合わせ、「書いてあるが差分に無い」「差分にあるが書いていない」を指摘。また説明文中の**意図しない約束**(「今後〜します」「全ケース対応」「パフォーマンス影響なし」など根拠のない断言)を検出して弱める案を出す
-- **未実行チェック**: 要約の「実行した?と聞くチェック」のうち、この会話で実行結果を確認していないものを列挙する。実行できる環境なら実行を提案する(勝手に走らせない)。「テストは通っている」を `[コード根拠]` で書けるのは実行結果を見たときだけ
-- **レビュアー予測**: 要約の CODEOWNERS と `reviewRequests` は `[コード根拠]`。過去作者の上位は `[推測]` として「この人は変更ファイルの事情を知っているので、過去の設計との整合を聞かれやすい」程度に留める。過去コミットから人柄や癖を推測しない
+- **Accountability check (for AI-generated code)**: pick the non-obvious hunks and list "what breaks without this line?" as questions for the author. Hunks the author cannot answer are the ones most likely pulled in without understanding.
+- **Revert thought experiment**: "If this PR is reverted tomorrow, what breaks and what gets fixed?" A vague answer means the PR's purpose is blurry.
+- **Rejected-alternatives ledger**: list 2–3 obvious alternative implementations and ask "why not this?" as `[ask author]`. This is the most-asked and worst-answered class of review question.
+- **3 a.m. incident test**: six months from now this code pages someone — what do they need to know? (where the logs are, whether a flag can turn it off, whether the data can be rolled back)
+- **PR description consistency**: if there is a description, diff it against the change: "claimed but not in the diff", "in the diff but not mentioned". Also catch **unintended promises** ("we'll follow up with…", "handles every case", "no performance impact") with no evidence, and propose softer wording.
+- **Unexecuted checks**: from the summary's check list, name the ones whose results you have not seen in this conversation. Offer to run them if the environment allows (do not run them unasked). "Tests pass" is `[code]` only once you have seen the output.
+- **Reviewer prediction**: CODEOWNERS and `reviewRequests` are `[code]`. Top past authors are `[guess]`, limited to "this person knows the history of these files, expect questions about consistency with earlier design". Never infer personality or habits from commit messages.
 
-### Step 5: 出力
-`assets/PR_QA_template.md` の構成で `.claude/pr-grill/<ブランチ名>/PR_QA.md` に書き出す(summary.md と同じ場所。コミットされない)。保存先をユーザーに伝える。
-最後に `[作者確認]` の件数と、決定木の根にあたる最初の 1 問だけを示し、Grill モードで詰めるか聞く。質問を一覧で浴びせない(まとめて聞くと浅い回答しか返らない)。
+### Step 5: output
+Write `.claude/pr-grill/<branch>/PR_QA.md` using the structure in `assets/PR_QA_template.md` (same place as summary.md; not committed). Tell the user where it is.
+Finish with the count of `[ask author]` items and **only the first question** — the root of the decision tree — and ask whether to Grill. Never dump the whole list at once (batched questions get shallow answers).
 
-## 注意
-- レビュアー目線は厳しめに。作者を安心させるために問題を小さく言わない
-- 要約の「秘密情報らしき値」に何か出ていたら、他の何よりも先に警告する
-- 推測で書いた箇所は必ず `[推測]` を付ける。ラベルの付いていない断言を作らない
-- `[作者承認]` を `[作者回答]` と同じ強さで扱わない。PR 説明文に反映する前に作者の言葉で言い直してもらう
+## Rules
+- Be as strict as a tough reviewer. Do not shrink problems to reassure the author.
+- If the summary's "secret-shaped values" section lists anything, warn about it before anything else.
+- Every inference carries `[guess]`. No unlabeled assertions.
+- Never treat `[approved]` as if it were `[author]`. Before anything `[approved]` goes into the PR description, have the author restate it in their own words.
