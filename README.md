@@ -2,7 +2,7 @@
 
 A Claude Code skill that gets you ready to **defend your own PR** — before you open it, and while reviewers are picking at it.
 
-It is for the *author*, not the reviewer. It reads your diff, maps the blast radius, predicts the questions reviewers will ask, and then — the part other tools don't do — separates what the code can prove from what only you know, and interviews you one question at a time until you can explain every decision.
+It is for the *author*, not the reviewer. It reads your diff, maps the blast radius, predicts the questions reviewers will ask, separates what the code can prove from what only you know, and interviews you one question at a time until you can explain every decision.
 
 [日本語版 README](README.ja.md)
 
@@ -18,7 +18,7 @@ Every answer in the generated `PR_QA.md` carries one of these labels:
 | `[author]` | You answered in your own words (after Grill) |
 | `[approved]` | You agreed with Claude's hypothesis — weaker than `[author]`, and flagged as such |
 
-Labels are rendered in whatever language you talk to Claude in (the skill text itself is Japanese). That separation is the point. A fabricated "reason" that you repeat in review is worse than no answer.
+Labels are rendered in whatever language you talk to Claude in. That separation is the point. A fabricated "reason" that you repeat in review is worse than no answer.
 
 ## Modes
 
