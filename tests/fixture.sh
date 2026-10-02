@@ -109,7 +109,8 @@ git worktree add -q "$TMP/wt" -b wt-branch main 2>/dev/null
   && bash "$SCRIPT" main > "$TMP/wt.txt" 2>"$TMP/wt.err"; echo $? > "$TMP/wt.code" )
 yes "runs inside a linked worktree without errors"  test "$(cat "$TMP/wt.code")" = 0
 no  "no mkdir error on the .git file"               grep -q 'Not a directory' "$TMP/wt.err"
-yes "header names the worktree and the others"      grep -q "^Worktree: $TMP/wt \[wt-branch\]" "$TMP/wt.txt"
+# Match on the basename: on macOS $TMP is under /var, which git resolves to /private/var
+yes "header names the worktree and the others"      grep -q "^Worktree: .*/wt \[wt-branch\]" "$TMP/wt.txt"
 yes "header lists the main checkout as other"       grep -q "other: .*\[feature/rename\]" "$TMP/wt.txt"
 no  "output dir is git-ignored in the worktree"     sh -c "cd '$TMP/wt' && git status --short | grep -q '\.claude/pr-grill'"
 git worktree remove --force "$TMP/wt" 2>/dev/null
