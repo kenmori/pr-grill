@@ -1,0 +1,78 @@
+# pr-grill
+
+A Claude Code skill that gets you ready to **defend your own PR** — before you open it, and while reviewers are picking at it.
+
+It is for the *author*, not the reviewer. It reads your diff, maps the blast radius, predicts the questions reviewers will ask, and then — the part other tools don't do — separates what the code can prove from what only you know, and interviews you one question at a time until you can explain every decision.
+
+[日本語版 README](README.ja.md)
+
+## What you get
+
+Every answer in the generated `PR_QA.md` carries one of these labels:
+
+| Label | Meaning |
+|---|---|
+| `[code]` | Provable from the diff, surrounding code, tests or git history — with `file:line` |
+| `[guess]` | Plausible inference, with the reason stated |
+| `[ask author]` | Intent, trade-offs, rejected alternatives — only you know; Claude will not make it up |
+| `[author]` | You answered in your own words (after Grill) |
+| `[approved]` | You agreed with Claude's hypothesis — weaker than `[author]`, and flagged as such |
+
+Labels are rendered in whatever language you talk to Claude in (the skill text itself is Japanese). That separation is the point. A fabricated "reason" that you repeat in review is worse than no answer.
+
+## Modes
+
+| Mode | Say | What happens |
+|---|---|---|
+| **Brief** (default) | "check this before I open the PR" | Change map, behaviour diff, blast radius, top questions with labelled answers, extra checks → `PR_QA.md` |
+| **Grill** | "grill me", "dig into the intent" | Resolves every `[ask author]` along a decision tree, one question per turn, root first (inspired by [grill-me](https://github.com/mattpocock/skills)) |
+| **Drill** | "quiz me", "test my understanding" | Oral exam: questions one at a time, graded against the code, weak spots listed |
+| **Reply** | paste a review comment | Classifies each comment and drafts a reply with evidence — including when the reviewer is wrong |
+
+Extra checks in Brief: accountability check for AI-generated hunks ("what breaks without this line?"), revert thought experiment, rejected-alternatives ledger, 3 a.m. incident test, PR description vs. diff consistency, unintended promises, unexecuted CI checks, reviewer prediction from CODEOWNERS.
+
+## Install
+
+```bash
+npx skills add kenmori/pr-grill
+```
+
+Or manually:
+
+```bash
+git clone https://github.com/kenmori/pr-grill
+cp -r pr-grill/skills/pr-grill ~/.claude/skills/pr-grill
+```
+
+Requires only `git` and `bash` (3.2+, so macOS stock bash works). `gh` is optional and adds PR title, body and reviewers.
+
+## Usage
+
+In any repository, on your feature branch:
+
+```
+> I want to check this before I open the PR
+```
+
+Claude runs `scripts/collect_pr_context.sh`, writes `.claude/pr-grill/<branch>/PR_QA.md` (automatically git-ignored via `.git/info/exclude`), and ends by asking whether to Grill the first unresolved question.
+
+You can also run the collector yourself:
+
+```bash
+skills/pr-grill/scripts/collect_pr_context.sh [--out DIR] [--no-diff] [--stdout] [base-branch]
+```
+
+It reports base freshness, untracked files, excluded generated files, test changes, CODEOWNERS, suspicious additions and secret-shaped values with `file:line`, changed signatures, callers **outside the diff** (the ones you forgot to update), repo review conventions, and the checks reviewers will ask whether you ran. Large diffs are split per file under `diff/`.
+
+## Development
+
+```bash
+shellcheck skills/pr-grill/scripts/collect_pr_context.sh tests/fixture.sh
+tests/fixture.sh
+```
+
+`tests/fixture.sh` builds a throwaway repo with a renamed function, a stray `console.log`, a hard-coded key, a nested `dist/`, a source file named `clock.ts` (must *not* be treated as a lock file) and an untracked file, and asserts the collector gets each one right.
+
+## Credits
+
+The Grill mode adapts the decision-tree interview from Matt Pocock's [grill-me](https://github.com/mattpocock/skills) to pull requests.
