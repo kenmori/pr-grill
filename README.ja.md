@@ -73,6 +73,10 @@ skills/pr-grill/scripts/collect_pr_context.sh [--out DIR] [--no-diff] [--stdout]
 
 出力する内容は次のとおりです。baseの鮮度、未追跡ファイル、除外した生成物、テスト変更の有無、CODEOWNERS、要注意パターンと秘密情報らしき値(`ファイル:行`付き)、変更されたシグネチャ、差分外の呼び出し元(更新し忘れたもの)、リポジトリのレビュー規約、レビュアーが「実行した?」と聞くチェック。大きい差分は`diff/`にファイル別に分割します。
 
+## 出力例
+
+[`examples/PR_QA.example.md`](examples/PR_QA.example.md)は、このリポジトリ自身のPRにスキルをかけて作ったBriefの出力です。
+
 ## 開発
 
 ```bash

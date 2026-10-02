@@ -171,12 +171,14 @@ section "Secret-shaped values (⚠ check these first)"
 
 # ---- signatures and callers ---------------------------------------------------
 SIG='(export |function |def |class |func |fn |fun |interface |type |struct |enum |trait |impl |const [A-Za-z_$][A-Za-z0-9_$]*[[:space:]]*(:[^=]*)?=[[:space:]]*(\(|async|function))'
-section "Changed function / export signatures (removed/added lines; first 80)"
-git diff -M -U0 "$MB" -- . "${EXCLUDE[@]}" \
+# Prose files are skipped here: "type fixes" in a README is not a signature
+PROSE=(':(exclude,glob)**/*.md' ':(exclude,glob)**/*.markdown' ':(exclude,glob)**/*.txt' ':(exclude,glob)**/*.rst')
+section "Changed function / export signatures (removed/added lines; first 80; code files only)"
+git diff -M -U0 "$MB" -- . "${EXCLUDE[@]}" "${PROSE[@]}" \
   | grep -E "^[-+][^-+].*$SIG" | head -80 | pipe
 
 section "Caller candidates (git grep for identifiers whose signature changed or was removed; defining file excluded)"
-git diff -M -U0 "$MB" -- . "${EXCLUDE[@]}" | awk '
+git diff -M -U0 "$MB" -- . "${EXCLUDE[@]}" "${PROSE[@]}" | awk '
   /^--- / { f = $0; sub(/^--- a\//, "", f); next }
   /^-/ && !/^---/ {
     line = substr($0, 2)
