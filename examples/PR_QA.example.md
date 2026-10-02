@@ -16,7 +16,7 @@ Rewrites every file Claude reads (SKILL.md, references, template, the collector'
 
 ### Essential changes
 - `skills/pr-grill/SKILL.md`, `references/*.md`, `assets/PR_QA_template.md`: full translation. Labels renamed `[コード根拠]→[code]`, `[推測]→[guess]`, `[作者確認]→[ask author]`, `[作者回答]→[author]`, `[作者承認]→[approved]` `[code]` (SKILL.md:17-21)
-- `scripts/collect_pr_context.sh`: every heading and message is English; logic unchanged `[code]` (138 lines changed, all inside `out`/`section`/`echo` strings or comments)
+- `scripts/collect_pr_context.sh`: every heading and message is English. One logic change: a `PROSE` pathspec excludes `.md/.txt/.rst` from the signature scan and from identifier extraction for the caller scan `[code]` (the caller `git grep` itself still searches prose)
 - `LICENSE`: MIT `[code]`
 
 ### Incidental changes
@@ -31,7 +31,7 @@ Rewrites every file Claude reads (SKILL.md, references, template, the collector'
 
 - Before: Claude read Japanese instructions and tended to answer in Japanese regardless of the user's language. After: instructions are English and say "answer in the user's language, translate the labels" `[code]` (SKILL.md:12)
 - Before: collector headings were Japanese, so the summary and SKILL.md's references to sections only lined up for Japanese readers. After: headings are English and SKILL.md names them verbatim `[code]`
-- No change in what the collector detects or excludes: the fixture passes unchanged in substance `[code]` (tests/fixture.sh, 29/29)
+- Detection change: prose files no longer contribute signatures or caller identifiers. Everything else the collector detects or excludes is unchanged; the fixture passes with assertions re-pointed at English headings `[code]` (tests/fixture.sh, 29/29)
 
 ## Blast radius
 
@@ -59,7 +59,7 @@ Rewrites every file Claude reads (SKILL.md, references, template, the collector'
 **A.** No. All four are text about `console.log`, not debug output `[code]`. This is a known limitation of a regex scan over added lines; it is left as is so the skill never hides a real hit.
 
 ### Q5. The collector now excludes prose from the signature and caller scans. Could that hide a real change? — Correctness / collect_pr_context.sh (PROSE)
-**A.** Only if a function definition lives in a `.md/.txt/.rst` file, which is not a case the skill targets `[code]`. The suspicious-pattern and secret scans still cover prose.
+**A.** It can hide two things: a function *defined* in a `.md/.txt/.rst` file (not a case the skill targets), and a signature change whose only removed line is in prose. References to code *from* prose are still found, because `PROSE` is not applied to the caller `git grep` `[code]`. The suspicious-pattern and secret scans still cover prose.
 
 ### Q6. Is `bash 3.2` compatibility still intact after the rewrite? — Tests / .github/workflows/ci.yml
 **A.** The rewrite changed strings only; CI runs the fixture on `macos-latest` with `/bin/bash` `[code]`. The result for this commit has not been seen yet → "Unexecuted checks".

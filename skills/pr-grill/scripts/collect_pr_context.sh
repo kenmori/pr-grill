@@ -40,26 +40,50 @@ if [ -z "$BASE" ]; then
     git rev-parse --verify --quiet "$c^{commit}" >/dev/null && BASE="$c"
   done
 fi
-[ -z "$BASE" ] && { echo "ERROR: pass the base branch as an argument" >&2; exit 1; }
-git rev-parse --verify --quiet "$BASE^{commit}" >/dev/null || { echo "ERROR: branch not found: $BASE" >&2; exit 1; }
+if [ -z "$BASE" ]; then
+  echo "ERROR: could not guess the base branch (tried origin/HEAD, origin/main, main, origin/master, master, develop)." >&2
+  echo "       Pass it explicitly, e.g.: collect_pr_context.sh origin/develop" >&2
+  exit 1
+fi
+if ! git rev-parse --verify --quiet "$BASE^{commit}" >/dev/null; then
+  echo "ERROR: branch not found: $BASE" >&2
+  echo "       Local branches: $(git branch --format='%(refname:short)' | tr '\n' ' ')" >&2
+  echo "       If it only exists on the remote, run: git fetch origin $BASE" >&2
+  exit 1
+fi
 
-MB=$(git merge-base "$BASE" HEAD) || { echo "ERROR: no merge-base between $BASE and HEAD" >&2; exit 1; }
+SHALLOW=$(git rev-parse --is-shallow-repository 2>/dev/null || echo false)
+if ! MB=$(git merge-base "$BASE" HEAD 2>/dev/null); then
+  echo "ERROR: no merge-base between $BASE and HEAD." >&2
+  if [ "$SHALLOW" = true ]; then
+    echo "       This is a shallow clone, so the history that joins the two branches is missing. Run: git fetch --unshallow" >&2
+  else
+    echo "       The branches share no history. Check that $BASE is the branch this work was started from." >&2
+  fi
+  exit 1
+fi
 HEAD_NAME=$(git rev-parse --abbrev-ref HEAD)
 
 # ---- output directory -----------------------------------------------------
 SLUG=$(printf '%s' "$HEAD_NAME" | sed 's#/#__#g')
 [ -z "$OUT" ] && OUT="$ROOT/.claude/pr-grill/$SLUG"
-mkdir -p "$OUT" || exit 1
-rm -rf "$OUT/diff"; [ "$WRITE_DIFF" = 1 ] && mkdir -p "$OUT/diff"
+mkdir -p "$OUT" || { echo "ERROR: cannot create the output directory $OUT (use --out DIR to pick another)" >&2; exit 1; }
+# Only remove what a previous run wrote (never rm -rf a user-supplied --out path)
+rm -f "$OUT"/diff/*.patch 2>/dev/null; rmdir "$OUT/diff" 2>/dev/null
+[ "$WRITE_DIFF" = 1 ] && mkdir -p "$OUT/diff"
 SUMMARY="$OUT/summary.md"
 : > "$SUMMARY"
 
-# Keep the default output directory out of commits via .git/info/exclude (never touches tracked files)
+# Keep the default output directory out of commits via the shared info/exclude (never touches tracked files).
+# --git-path resolves correctly inside a linked worktree, where $ROOT/.git is a file, not a directory.
+EXCL_WARN=""
 case "$OUT" in
   "$ROOT/.claude/pr-grill"*)
-    EXCL="$ROOT/.git/info/exclude"
+    EXCL=$(git rev-parse --git-path info/exclude)
     if ! grep -qs '^\.claude/pr-grill/$' "$EXCL" 2>/dev/null; then
-      mkdir -p "$(dirname "$EXCL")" && echo '.claude/pr-grill/' >> "$EXCL"
+      if ! { mkdir -p "$(dirname "$EXCL")" && echo '.claude/pr-grill/' >> "$EXCL"; } 2>/dev/null; then
+        EXCL_WARN="⚠ Could not write $EXCL. The output directory .claude/pr-grill/ is NOT git-ignored; do not commit it."
+      fi
     fi ;;
 esac
 
@@ -88,6 +112,17 @@ BASE_TS=$(git log -1 --format=%ct "$BASE"); NOW_TS=$(date +%s)
 BASE_AGE=$(( (NOW_TS - BASE_TS) / 86400 ))
 out "Latest commit on base: $(git log -1 --format='%h %cd' --date=short "$BASE") (${BASE_AGE} days ago)"
 [ "$BASE_AGE" -gt 7 ] && out "⚠ The base is ${BASE_AGE} days old. Without \`git fetch origin\`, other people's merged work will show up in this diff."
+[ "$SHALLOW" = true ] && out "⚠ Shallow clone: commit history and past-author data are incomplete. \`git fetch --unshallow\` gives the full picture."
+if [ "$(git rev-parse "$BASE")" = "$(git rev-parse HEAD)" ]; then
+  out "⚠ HEAD is at the same commit as $BASE: you are on the base branch (or nothing has been committed on top of it)." \
+      "  Only uncommitted changes can be reviewed. Switch to the feature branch or its worktree if that is not what you meant."
+fi
+WT_COUNT=$(git worktree list 2>/dev/null | grep -c .)
+if [ "$WT_COUNT" -gt 1 ]; then
+  out "Worktree: $ROOT [$HEAD_NAME]"
+  git worktree list | grep -v "^$ROOT " | sed 's/^/  other: /' | tee -a "$SUMMARY"
+fi
+[ -n "$EXCL_WARN" ] && out "$EXCL_WARN"
 out "Output: $OUT"
 
 section "Uncommitted changes (git status)"
@@ -100,7 +135,7 @@ section "Commits"
 git log --no-merges --format='- %h %s (%an, %ad)' --date=short "$MB"..HEAD | pipe "(no commits since base; uncommitted changes only)"
 
 section "Changed files (stat)"
-git diff -M --stat=120 "$MB" -- . "${EXCLUDE[@]}" | pipe
+git diff -M --stat=120 "$MB" -- . "${EXCLUDE[@]}" | pipe "(nothing changed since $BASE after exclusions: no commits on top of it and no edits in the working tree)"
 section "Added / deleted / renamed / mode changes"
 git diff -M --summary "$MB" -- . "${EXCLUDE[@]}" | pipe "(none)"
 
@@ -162,12 +197,19 @@ section "Suspicious patterns (added lines only, file:line)"
   grep -E '^[^:]*\.py:[0-9]+: .*(^|[^A-Za-z0-9_.])print\(' "$ADDED"
 } | sort -u | pipe
 
-section "Secret-shaped values (⚠ check these first)"
+section "Secret-shaped values (⚠ check these first; values are masked here but NOT in full.diff / diff/*.patch)"
+# Keep a 4-character prefix so the author can find the line; never echo the whole value into the summary
+mask() {
+  sed -E \
+    -e "s/(AKIA[0-9A-Z]{4}|ghp_[A-Za-z0-9]{4}|github_pat_[A-Za-z0-9_]{4}|gh[ousr]_[A-Za-z0-9]{4}|sk-[A-Za-z0-9_-]{4}|xox[baprs]-[A-Za-z0-9-]{4}|AIza[0-9A-Za-z_-]{4}|eyJ[A-Za-z0-9_-]{4})[A-Za-z0-9_.-]*/\1…[masked]/g" \
+    -e "s/(-----BEGIN [A-Z ]*PRIVATE KEY-----).*/\1 …[masked]/" \
+    -e "s/([:=][[:space:]]*[\"'][^\"']{4})[^\"']{2,}([\"'])/\1…[masked]\2/g"
+}
 {
   grep -Ei "(password|passwd|secret|api[_-]?key|access[_-]?key|token|bearer|private[_-]?key)[\"']?[[:space:]]*[:=][[:space:]]*[\"'][^\"']{6,}" "$ADDED"
   grep -E "AKIA[0-9A-Z]{16}|ghp_[A-Za-z0-9]{36}|github_pat_[A-Za-z0-9_]{20,}|gh[ousr]_[A-Za-z0-9]{36}|sk-[A-Za-z0-9_-]{20,}|xox[baprs]-[A-Za-z0-9-]{10,}|AIza[0-9A-Za-z_-]{35}|-----BEGIN [A-Z ]*PRIVATE KEY-----|eyJ[A-Za-z0-9_-]{15,}\.eyJ" "$ADDED"
   printf '%s\n' "$CHANGED" | grep -E '(^|/)\.env(\.|$)|\.(pem|p12|pfx|key)$' | sed 's/$/  <- the file itself needs a look/'
-} | sort -u | pipe
+} | sort -u | mask | pipe
 
 # ---- signatures and callers ---------------------------------------------------
 SIG='(export |function |def |class |func |fn |fun |interface |type |struct |enum |trait |impl |const [A-Za-z_$][A-Za-z0-9_$]*[[:space:]]*(:[^=]*)?=[[:space:]]*(\(|async|function))'
