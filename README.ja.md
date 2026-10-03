@@ -60,10 +60,12 @@ cp -r pr-grill/skills/pr-grill ~/.claude/skills/pr-grill
 任意のリポジトリのフィーチャーブランチで、次のように話しかけます。
 
 ```
-> PR出す前に確認したい
+> 自分の変更を理解したい
 ```
 
-Claudeが`scripts/collect_pr_context.sh`を実行し、`.claude/pr-grill/<ブランチ名>/PR_QA.md`を書き出します。このディレクトリは`.git/info/exclude`に自動登録されるので、コミットされません。最後に、未解消の最初の1問をGrillで詰めるか聞いてきます。
+Claudeが`scripts/collect_pr_context.sh`を実行し、`.claude/pr-grill/<ブランチ名>/PR_QA.md`を書き出します。このディレクトリは共有の`info/exclude`に自動登録されるので、コミットされません。`git worktree`で作ったチェックアウトでも同じように動きます。
+
+出力ディレクトリはgitには無視されますが、ディスクには残ります。`full.diff`と`diff/*.patch`には差分がそのまま入ります。要約では秘密情報らしき値を伏せますが、差分そのものに秘密が含まれているときは、対処したあとで`.claude/pr-grill/`を削除してください。最後に、未解消の最初の1問をGrillで詰めるか聞いてきます。
 
 収集スクリプトは単体でも使えます。
 

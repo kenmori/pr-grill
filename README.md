@@ -51,10 +51,12 @@ Requires only `git` and `bash` (3.2+, so macOS stock bash works). `gh` is option
 In any repository, on your feature branch:
 
 ```
-> I want to check this before I open the PR
+> I want to understand my change before I open the PR
 ```
 
-Claude runs `scripts/collect_pr_context.sh`, writes `.claude/pr-grill/<branch>/PR_QA.md` (automatically git-ignored via `.git/info/exclude`), and ends by asking whether to Grill the first unresolved question.
+Claude runs `scripts/collect_pr_context.sh`, writes `.claude/pr-grill/<branch>/PR_QA.md` (automatically git-ignored via the shared `info/exclude`, so it also works inside `git worktree` checkouts), and ends by asking whether to Grill the first unresolved question.
+
+The output directory is ignored by git but stays on disk, and `full.diff` / `diff/*.patch` contain the raw diff. The summary masks secret-shaped values; if the diff itself contains a secret, delete `.claude/pr-grill/` once you have dealt with it.
 
 You can also run the collector yourself:
 

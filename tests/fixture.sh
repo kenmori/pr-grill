@@ -39,7 +39,7 @@ git checkout -q -b feature/rename
 # 1. rename a function without updating its caller (src/caller.ts)
 sed -i.bak 's/oldName/newName/' src/lib.ts && rm src/lib.ts.bak
 # 2. stray console.log and secrets, in a source file whose name contains "lock"
-printf 'console.log("dbg")\nconst apiKey = "sk-abcdefghijklmnopqrstuvwxyz"\nconst token = "hardcoded-token"\nexport const tick = () => 2\n' > src/clock.ts
+printf 'console.log("dbg")\nconst apiKey = "sk-abcdefghijklmnopqrstuvwxyz"\nconst token = "hardcoded-token"\nconst jwt = "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxIn0.sig"\nexport const tick = () => 2\n' > src/clock.ts
 # 3. code that merely contains the word "token" (not a secret)
 printf 'export const tokenize = (s: string) => s.split(" ")\n' > src/tokenizer.ts
 # 4. nested dist and a lockfile (must be excluded)
@@ -61,8 +61,12 @@ yes "stdout matches summary.md" diff -q "$OUT" "$STDOUT"
 echo "# must detect"
 yes "caller of renamed function flagged as outside the diff" in_out 'src/caller\.ts:.*oldName.*outside diff'
 yes "console.log reported with file:line"                     in_section "Suspicious patterns" '^src/clock\.ts:1: console\.log'
-yes "sk- shaped key detected"                                 in_section "Secret-shaped values" '^src/clock\.ts:2: .*sk-abcdef'
-yes "token = \"literal\" detected"                            in_section "Secret-shaped values" '^src/clock\.ts:3: .*hardcoded-token'
+yes "sk- shaped key detected and masked"                      in_section "Secret-shaped values" '^src/clock\.ts:2: .*sk-a…\[masked\]'
+no  "sk- key value is not echoed"                             in_section "Secret-shaped values" 'sk-abcdefghij'
+yes "token = \"literal\" detected and masked"                 in_section "Secret-shaped values" '^src/clock\.ts:3: .*"hard…\[masked\]"'
+no  "token value is not echoed"                               in_section "Secret-shaped values" 'hardcoded-token'
+yes "JWT detected and masked"                                 in_section "Secret-shaped values" '^src/clock\.ts:4: .*"eyJh…\[masked\]"'
+no  "JWT value is not echoed"                                 in_section "Secret-shaped values" 'eyJzdWIiOiIxIn0'
 yes "missing test changes called out"                        in_out 'no test changes'
 yes "untracked file listed"                                   in_section "Untracked files" '^src/brand_new\.ts$'
 yes "CODEOWNERS approximate match (last wins)"                in_section "CODEOWNERS" '^- src/lib\.ts → @team-src'
@@ -88,6 +92,41 @@ yes "--no-diff skips patches"            test ! -d "$TMP/custom/diff"
 yes "--help"                             sh -c "bash '$SCRIPT' --help | grep -q -- --out"
 no  "unknown base fails"                 sh -c "bash '$SCRIPT' no-such-branch 2>/dev/null"
 no  "outside a git repo fails"           sh -c "cd '$TMP' && bash '$SCRIPT' 2>/dev/null"
+
+echo "# --out safety: a pre-existing file in <out>/diff survives"
+mkdir -p "$TMP/keep/diff" && printf 'mine\n' > "$TMP/keep/diff/notes.txt"
+bash "$SCRIPT" --out "$TMP/keep" main > /dev/null 2>&1
+yes "user file in --out/diff is kept"  test -f "$TMP/keep/diff/notes.txt"
+
+echo "# base == HEAD"
+git checkout -q main
+bash "$SCRIPT" main > "$TMP/onbase.txt" 2>&1
+yes "warns when HEAD is the base commit"  grep -q 'HEAD is at the same commit as main' "$TMP/onbase.txt"
+yes "says nothing changed"                grep -q 'nothing changed since main' "$TMP/onbase.txt"
+git checkout -q feature/rename
+
+echo "# linked worktree"
+git worktree add -q "$TMP/wt" -b wt-branch main 2>/dev/null
+( cd "$TMP/wt" && printf 'export const w = 1\n' > w.ts && git add w.ts && git commit -qm w \
+  && bash "$SCRIPT" main > "$TMP/wt.txt" 2>"$TMP/wt.err"; echo $? > "$TMP/wt.code" )
+yes "runs inside a linked worktree without errors"  test "$(cat "$TMP/wt.code")" = 0
+no  "no mkdir error on the .git file"               grep -q 'Not a directory' "$TMP/wt.err"
+# Match on the basename: on macOS $TMP is under /var, which git resolves to /private/var
+yes "header names the worktree and the others"      grep -q "^Worktree: .*/wt \[wt-branch\]" "$TMP/wt.txt"
+yes "header lists the main checkout as other"       grep -q "other: .*\[feature/rename\]" "$TMP/wt.txt"
+no  "output dir is git-ignored in the worktree"     sh -c "cd '$TMP/wt' && git status --short | grep -q '\.claude/pr-grill'"
+git worktree remove --force "$TMP/wt" 2>/dev/null
+
+echo "# shallow clone without a merge-base"
+git clone -q --depth 1 -b main "file://$REPO" "$TMP/shallow" 2>/dev/null
+( cd "$TMP/shallow" && git fetch -q --depth 1 origin feature/rename 2>/dev/null && git checkout -q FETCH_HEAD \
+  && bash "$SCRIPT" origin/main > /dev/null 2>"$TMP/shallow.err"; echo $? > "$TMP/shallow.code" )
+yes "exits 1 without a merge-base"                 test "$(cat "$TMP/shallow.code")" = 1
+yes "explains the shallow clone and the fix"       grep -q 'git fetch --unshallow' "$TMP/shallow.err"
+
+echo "# unknown base lists local branches"
+bash "$SCRIPT" no-such-branch > /dev/null 2>"$TMP/nobase.err"
+yes "names the local branches"                     grep -q 'Local branches:.*feature/rename' "$TMP/nobase.err"
 
 echo "# with a test change"
 printf 'test("y", () => {})\n' >> tests/lib.test.ts
