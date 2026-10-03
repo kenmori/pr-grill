@@ -15,6 +15,10 @@ Claudeは理由を勝手に作りません。そのため、レビューで「�
 
 [English README](README.md)
 
+![pr-grillのデモ: Briefのあと、Grillで1問ずつ答え、理解度メーターで終わる](demo/pr-grill.ja.svg)
+
+<sub>台本付きデモ(42秒)。収集スクリプトの出力は本物、対話は再現です。[MP4版](demo/pr-grill.ja.mp4)。</sub>
+
 ## PRがたどる流れ
 
 ```

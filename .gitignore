@@ -1,0 +1,4 @@
+# demo build artifacts (regenerate with: python3 demo/build.py <lang> --video)
+demo/_video/
+demo/player.*.html
+demo/*.webm

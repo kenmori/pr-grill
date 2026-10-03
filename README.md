@@ -6,6 +6,10 @@ It is for the *author*, not the reviewer. It reads your diff, maps the blast rad
 
 [日本語版 README](README.ja.md)
 
+![pr-grill demo: Brief, then Grill one question at a time, ending with the readiness meter](demo/pr-grill.en.svg)
+
+<sub>Scripted demo (48 s): the collector output is real, the dialogue is re-enacted. [MP4 version](demo/pr-grill.en.mp4).</sub>
+
 ## How a PR goes through it
 
 ```

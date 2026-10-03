@@ -1,0 +1,98 @@
+{
+  "title": "pr-grill — a scripted demo (collector output is real; the dialogue is re-enacted)",
+  "scenes": [
+    {
+      "events": [
+        {"in": "I want to understand my change before I open the PR"},
+        {"out": [
+          [["Two quick questions first (asked once per branch):", "dim"]],
+          [["  1. Who wrote this change?  myself / mostly AI, I directed it / someone else", ""]],
+          [["  2. How well do you know this area?  new / have worked here / own it", ""]]
+        ]},
+        {"in": "mostly AI, I directed it / have worked here"},
+        {"out": [
+          [["Profile: working, wrote=ai → accountability check on every hunk.", "dim"]],
+          [["Running scripts/collect_pr_context.sh main …", "dim"]]
+        ]}
+      ]
+    },
+    {
+      "events": [
+        {"out": [
+          [["## BASE: main  HEAD: feature/rename  merge-base: 89acda59", "head"]],
+          [["## Untracked files (⚠ NOT included in the diff below)", "head"]],
+          [["src/brand_new.ts", ""]],
+          [["## Secret-shaped values (⚠ check these first; masked here, NOT in full.diff)", "head"]],
+          [["src/clock.ts:3: const apiKey = \"sk-a…[masked]\"", "warn"]],
+          [["## Caller candidates (defining file excluded)", "head"]],
+          [["### oldName (defined in src/lib.ts)", ""]],
+          [["src/caller.ts:1: import { oldName } from \"./lib\"", ""], ["   <- outside diff (possibly not updated)", "warn"]],
+          [["## Test file changes", "head"]],
+          [["(no test changes <- expect a question about this)", "warn"]],
+          [["## Checks reviewers will ask whether you ran", "head"]],
+          [["- npm run test   - npm run lint   - CI: .github/workflows/ci.yml", ""]]
+        ]}
+      ]
+    },
+    {
+      "events": [
+        {"out": [
+          [["# PR QA: feature/rename", "head"]],
+          [["Readiness ███░░░░░░░ 30%", "meter"], ["  (code 3 · author 0 · approved 0 · open 7 of 10)", "dim"]],
+          [["## The 3 questions you will almost certainly get", "head"]],
+          [["1. Why does src/caller.ts still import oldName?", ""], ["   [code]", "ok"], [" src/caller.ts:1", "dim"]],
+          [["2. Is \"sk-a…\" a real key? Why is it in the diff?", ""], ["   [ask author]", "ask"]],
+          [["3. No tests changed. What covers the rename?", ""], ["   [ask author]", "ask"]],
+          [["", ""]],
+          [["7 questions only you can answer. The first one, the root of the tree:", "dim"]],
+          [["Q1/7  Why is this change needed? What broke, or who asked for it?", "q"]],
+          [["      (no suggested answer here: this one is yours)", "dim"]]
+        ]},
+        {"in": "grill me"}
+      ]
+    },
+    {
+      "events": [
+        {"out": [[["Q1/7  Why is this change needed? What broke, or who asked for it?", "q"]]]},
+        {"in": "Names were inconsistent across modules; on-call misread a log last week (INC-212)."},
+        {"out": [
+          [["✔ [author]", "ok"], ["   Readiness ████░░░░░░ 40%", "meter"]],
+          [["Q2/7  What does done mean? What did you leave out of scope?", "q"], ["  (see: src/lib.ts:1)", "dim"]]
+        ]},
+        {"in": "Only lib.ts and its callers. The CLI keeps the old name until v3."},
+        {"out": [
+          [["✔ [author]", "ok"], ["   Readiness █████░░░░░ 50%", "meter"]],
+          [["Q3/7  Why rename, instead of an alias with a deprecation warning?", "q"]],
+          [["      (no suggested answer: rejected alternatives are yours)", "dim"]]
+        ]},
+        {"in": "enough for today"}
+      ]
+    },
+    {
+      "events": [
+        {"out": [
+          [["Readiness █████░░░░░ 50%", "meter"], ["  (code 3 · author 2 · approved 0 · open 5 of 10)  Stumbled: tests", "dim"]],
+          [["Recorded in .claude/pr-grill/stats.log (1 PR so far)", "dim"]],
+          [["", ""]],
+          [["Open before you open the PR:", "head"]],
+          [["  • src/caller.ts still imports oldName", ""], ["              [code]", "ok"]],
+          [["  • the sk-a… value in src/clock.ts", ""], ["                  [ask author]", "ask"]],
+          [["  • Q3: alias + deprecation, why not?", ""], ["                [ask author]", "ask"]],
+          [["", ""]],
+          [["PR_QA.md → .claude/pr-grill/feature__rename/PR_QA.md  (git-ignored)", "dim"]]
+        ]}
+      ]
+    },
+    {
+      "card": [
+        [["pr-grill", "title"]],
+        [["Understand your own PR well enough to defend it.", ""]],
+        [["", ""]],
+        [["/plugin marketplace add kenmori/pr-grill", "meter"]],
+        [["/plugin install pr-grill@pr-grill", "meter"]],
+        [["", ""]],
+        [["Scripted demo: collector output is real, the dialogue is re-enacted.", "dim"]]
+      ]
+    }
+  ]
+}
