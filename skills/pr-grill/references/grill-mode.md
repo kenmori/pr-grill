@@ -18,6 +18,7 @@ root: why is this change needed (problem, trigger)
           └ release: flags, migration, rollback, monitoring
 ```
 Prune branches the diff does not touch. Skip nodes already settled as `[code]` in Steps 1–4.
+The five exit-bar items (SKILL.md, Step 0.5) are always in the tree: "what" sits at the root, "revert" and "blast radius" under approach, "edge case" under edge-case policy, "detection" under release. They are never pruned.
 
 ## 2. Ask one question per turn
 

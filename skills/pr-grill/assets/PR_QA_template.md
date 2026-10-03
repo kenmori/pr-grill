@@ -2,6 +2,13 @@
 
 <readiness meter line from `pr_grill_stats.sh meter`; refresh at every Grill checkpoint>
 
+## Exit bar (same for every author; done = all five `[code]` or `[author]`)
+1. What it changes, in one sentence — `[ ]`
+2. Revert: what breaks, what gets fixed — `[ ]`
+3. Blast radius: callers, and the one most at risk — `[ ]`
+4. The edge case most likely to bite — `[ ]`
+5. Detection: how production would show it broke — `[ ]`
+
 ## One-sentence summary
 
 ## ⚠ Top priority (secrets · callers outside the diff · untracked files)

@@ -6,6 +6,44 @@ It is for the *author*, not the reviewer. It reads your diff, maps the blast rad
 
 [日本語版 README](README.ja.md)
 
+## How a PR goes through it
+
+```
+write the change
+   │
+   ▼
+Brief    "I want to understand my change"   → change map, blast radius, labelled Q&A → PR_QA.md
+   │
+   ▼
+Grill    "grill me"                          → every [ask author] resolved, one question per turn
+   │
+   ▼
+open the PR
+   │
+   ▼
+Reply    paste review comments               → classified, evidence-based reply drafts
+   │
+   ▼
+Revise   "I pushed the fixes"                → only the delta since the review, fix-by-fix questions,
+   │                                           re-review summary for the reviewer
+   ▼
+merge    → one line in your record (readiness %, weak lenses); Drill any time for a rehearsal
+```
+
+## Any starting level, one finish line
+
+The first turn asks two things: who wrote the change (you / AI under your direction / someone else, you took it over) and how well you know this part of the code. That sets the **path**: a newcomer gets a plain-language walkthrough before any question and hints in Drill; an owner skips the narration, gets no suggested answers in Grill (they anchor like anyone else) and a brutal Drill.
+
+The **finish line is the same for everyone**, five questions you must answer in your own words before the session counts as done:
+
+1. What this PR changes, in one sentence a teammate outside the project would understand.
+2. What breaks and what gets fixed if it is reverted tomorrow.
+3. Who calls the changed code, and which caller is most at risk.
+4. The edge case most likely to bite, and what the code does there.
+5. How anyone would notice in production that it broke.
+
+If you inherited the branch, "ask the author" becomes "ask the original author": the skill finds them in `git log` and hands you the list of questions to take to them, and only grills you on what you changed since.
+
 ## What you get
 
 Every answer in the generated `PR_QA.md` carries one of these labels:

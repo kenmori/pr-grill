@@ -4,7 +4,8 @@
 # Usage:
 #   pr_grill_stats.sh record --branch B [--pr N] --nodes N --code N --author N --approved N --open N
 #                     [--drill PERFECT/PARTIAL/WRONG] [--difficulty easy|normal|brutal]
-#                     [--stumbled lens1,lens2] [--rounds N]      append a record, print the meter line
+#                     [--stumbled lens1,lens2] [--rounds N] [--level newcomer|working|owner]
+#                                                               append a record, print the meter line
 #   pr_grill_stats.sh meter --nodes N --code N --author N --approved N [--open N]
 #                                                               print only the meter line
 #   pr_grill_stats.sh list [--last N]                             table of past PRs + weak-lens trend
@@ -14,7 +15,7 @@
 # Readiness = (code + author + approved/2) / nodes. [approved] counts half: agreed with, not said in own words.
 set -uo pipefail
 
-usage() { sed -n '2,13p' "$0" | sed 's/^# \{0,1\}//'; }
+usage() { sed -n '2,14p' "$0" | sed 's/^# \{0,1\}//'; }
 
 STATS_DIR="${PR_GRILL_STATS_DIR:-}"
 if [ -z "$STATS_DIR" ]; then
@@ -24,7 +25,7 @@ fi
 LOG="$STATS_DIR/stats.log"
 
 CMD="${1:-}"; [ $# -gt 0 ] && shift
-BRANCH=""; PRNUM=""; NODES=""; CODE=0; AUTHOR=0; APPROVED=0; OPEN=0; DRILL=""; DIFF=""; STUMBLED=""; ROUNDS=1; LAST=10
+BRANCH=""; PRNUM=""; NODES=""; CODE=0; AUTHOR=0; APPROVED=0; OPEN=0; DRILL=""; DIFF=""; STUMBLED=""; ROUNDS=1; LAST=10; LEVEL=""
 while [ $# -gt 0 ]; do
   case "$1" in
     --branch) BRANCH="$2"; shift 2 ;;     --pr) PRNUM="$2"; shift 2 ;;
@@ -33,6 +34,7 @@ while [ $# -gt 0 ]; do
     --open) OPEN="$2"; shift 2 ;;         --drill) DRILL="$2"; shift 2 ;;
     --difficulty) DIFF="$2"; shift 2 ;;   --stumbled) STUMBLED="$2"; shift 2 ;;
     --rounds) ROUNDS="$2"; shift 2 ;;     --last) LAST="$2"; shift 2 ;;
+    --level) LEVEL="$2"; shift 2 ;;
     -h|--help) usage; exit 0 ;;
     *) echo "ERROR: unknown argument: $1" >&2; usage >&2; exit 2 ;;
   esac
@@ -87,8 +89,9 @@ case "$CMD" in
     need_counts
     mkdir -p "$STATS_DIR" || exit 1
     PCT=$(readiness "$NODES" "$CODE" "$AUTHOR" "$APPROVED")
-    printf 'date=%s branch=%s pr=%s nodes=%s code=%s author=%s approved=%s open=%s readiness=%s drill=%s difficulty=%s stumbled=%s rounds=%s\n' \
-      "$(date '+%Y-%m-%d')" "$BRANCH" "${PRNUM:--}" "$NODES" "$CODE" "$AUTHOR" "$APPROVED" "$OPEN" "${PCT:--}" "${DRILL:--}" "${DIFF:--}" "${STUMBLED:--}" "$ROUNDS" >> "$LOG"
+    case "$LEVEL" in ''|newcomer|working|owner) ;; *) echo "ERROR: --level must be newcomer, working or owner" >&2; exit 2 ;; esac
+    printf 'date=%s branch=%s pr=%s nodes=%s code=%s author=%s approved=%s open=%s readiness=%s drill=%s difficulty=%s stumbled=%s rounds=%s level=%s\n' \
+      "$(date '+%Y-%m-%d')" "$BRANCH" "${PRNUM:--}" "$NODES" "$CODE" "$AUTHOR" "$APPROVED" "$OPEN" "${PCT:--}" "${DRILL:--}" "${DIFF:--}" "${STUMBLED:--}" "$ROUNDS" "${LEVEL:-working}" >> "$LOG"
     meter_line "$NODES" "$CODE" "$AUTHOR" "$APPROVED" "$OPEN" "$DRILL" "$STUMBLED"
     echo "Recorded in $LOG ($(grep -c . "$LOG") PR(s) so far)"
     ;;
@@ -99,12 +102,13 @@ case "$CMD" in
   list)
     [ -f "$LOG" ] || { echo "No record yet ($LOG). Finish a Grill or Drill and it will be written."; exit 0; }
     is_int "$LAST" || { echo "ERROR: --last must be an integer" >&2; exit 2; }
-    printf '%-10s  %-28s  %-6s  %-5s  %-6s  %-7s  %s\n' date branch pr ready drill rounds stumbled
+    printf '%-10s  %-28s  %-6s  %-5s  %-6s  %-7s  %-8s  %s\n' date branch pr ready drill rounds level stumbled
     tail -"$LAST" "$LOG" | awk '{
       for (i = 1; i <= NF; i++) { split($i, kv, "="); r[kv[1]] = kv[2] }
       d = r["drill"]; if (d != "-") { split(d, p, "/"); d = p[1] "/" (p[1] + p[2] + p[3]) }
       ready = (r["readiness"] == "-") ? "-" : r["readiness"] "%"
-      printf "%-10s  %-28s  %-6s  %-5s  %-6s  %-7s  %s\n", r["date"], substr(r["branch"], 1, 28), r["pr"], ready, d, r["rounds"], r["stumbled"]
+      lv = ("level" in r) ? r["level"] : "working"
+      printf "%-10s  %-28s  %-6s  %-5s  %-6s  %-7s  %-8s  %s\n", r["date"], substr(r["branch"], 1, 28), r["pr"], ready, d, r["rounds"], lv, r["stumbled"]
     }'
     W=$(weak_trend)
     if [ -n "$W" ]; then
