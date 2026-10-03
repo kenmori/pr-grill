@@ -10,13 +10,7 @@
           "out": [
             [
               [
-                "Step 1/5 collect · 2/5 change map · 3/5 questions · 4/5 checks · 5/5 PR_QA.md",
-                "dim"
-              ]
-            ],
-            [
-              [
-                "Running scripts/collect_pr_context.sh main …",
+                "Treating you as: wrote with AI, some history here — say so if wrong.",
                 "dim"
               ]
             ]
@@ -30,95 +24,71 @@
           "out": [
             [
               [
-                "## BASE: main  HEAD: feature/rename  merge-base: 89acda59",
-                "head"
-              ]
-            ],
-            [
-              [
-                "Reading plan: 4 files, 61 diff lines → inline",
+                "Step 1/5 collect      ",
                 "dim"
-              ]
-            ],
-            [
-              [
-                "## Author profile (inferred from git)",
-                "head"
-              ]
-            ],
-            [
-              [
-                "wrote=ai (2 commits carry an AI co-author trailer)   knows=some (2 past commits by you)",
-                ""
-              ]
-            ],
-            [
-              [
-                "## Untracked files (⚠ NOT included in the diff below)",
-                "head"
-              ]
-            ],
-            [
-              [
-                "src/brand_new.ts",
-                ""
-              ]
-            ],
-            [
-              [
-                "## Secret-shaped values (⚠ check these first; masked here, NOT in full.diff)",
-                "head"
-              ]
-            ],
-            [
-              [
-                "src/clock.ts:3: const apiKey = \"sk-a…[masked]\"",
-                "warn"
-              ]
-            ],
-            [
-              [
-                "## Caller candidates (defining file excluded)",
-                "head"
-              ]
-            ],
-            [
-              [
-                "### oldName (defined in src/lib.ts)",
-                ""
-              ]
-            ],
-            [
-              [
-                "src/caller.ts:1: import { oldName } from \"./lib\"",
-                ""
               ],
               [
-                "   <- outside diff (possibly not updated)",
+                "✔",
+                "ok"
+              ],
+              [
+                "  4 files, 61 diff lines",
+                ""
+              ]
+            ],
+            [
+              [
+                "Step 2/5 change map   ",
+                "dim"
+              ],
+              [
+                "✔",
+                "ok"
+              ],
+              [
+                "  2 essential · 1 incidental · 1 unexplained",
+                ""
+              ]
+            ],
+            [
+              [
+                "Step 3/5 questions    ",
+                "dim"
+              ],
+              [
+                "✔",
+                "ok"
+              ],
+              [
+                "  7 only you can answer",
+                ""
+              ]
+            ],
+            [
+              [
+                "Step 4/5 checks       ",
+                "dim"
+              ],
+              [
+                "✔",
+                "ok"
+              ],
+              [
+                "  1 secret-shaped value · 1 caller outside the diff · no test changes",
                 "warn"
               ]
             ],
             [
               [
-                "## Test file changes",
-                "head"
-              ]
-            ],
-            [
+                "Step 5/5 PR_QA.md     ",
+                "dim"
+              ],
               [
-                "(no test changes <- expect a question about this)",
-                "warn"
-              ]
-            ],
-            [
+                "✔",
+                "ok"
+              ],
               [
-                "## Checks reviewers will ask whether you ran",
-                "head"
-              ]
-            ],
-            [
-              [
-                "- npm run test   - npm run lint   - CI: .github/workflows/ci.yml",
+                "  written → .pr-grill/feature__rename/PR_QA.md",
                 ""
               ]
             ]
@@ -134,12 +104,6 @@
               [
                 "# PR QA: feature/rename",
                 "head"
-              ]
-            ],
-            [
-              [
-                "Treating you as: wrote with AI, some history here — say so if wrong.",
-                "dim"
               ]
             ],
             [

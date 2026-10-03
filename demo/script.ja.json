@@ -10,13 +10,7 @@
           "out": [
             [
               [
-                "Step 1/5 収集 · 2/5 変更の地図 · 3/5 想定問答 · 4/5 チェック · 5/5 PR_QA.md",
-                "dim"
-              ]
-            ],
-            [
-              [
-                "scripts/collect_pr_context.sh main を実行中…",
+                "AI併用・この領域に過去2コミット、として進めます。違えば一言ください。",
                 "dim"
               ]
             ]
@@ -30,95 +24,71 @@
           "out": [
             [
               [
-                "## BASE: main  HEAD: feature/rename  merge-base: 89acda59",
-                "head"
-              ]
-            ],
-            [
-              [
-                "Reading plan: 4 files, 61 diff lines → inline",
+                "Step 1/5 収集         ",
                 "dim"
-              ]
-            ],
-            [
-              [
-                "## Author profile (inferred from git)",
-                "head"
-              ]
-            ],
-            [
-              [
-                "wrote=ai (2 commits carry an AI co-author trailer)   knows=some (2 past commits by you)",
-                ""
-              ]
-            ],
-            [
-              [
-                "## Untracked files (⚠ NOT included in the diff below)",
-                "head"
-              ]
-            ],
-            [
-              [
-                "src/brand_new.ts",
-                ""
-              ]
-            ],
-            [
-              [
-                "## Secret-shaped values (⚠ check these first; masked here, NOT in full.diff)",
-                "head"
-              ]
-            ],
-            [
-              [
-                "src/clock.ts:3: const apiKey = \"sk-a…[masked]\"",
-                "warn"
-              ]
-            ],
-            [
-              [
-                "## Caller candidates (defining file excluded)",
-                "head"
-              ]
-            ],
-            [
-              [
-                "### oldName (defined in src/lib.ts)",
-                ""
-              ]
-            ],
-            [
-              [
-                "src/caller.ts:1: import { oldName } from \"./lib\"",
-                ""
               ],
               [
-                "   <- outside diff (possibly not updated)",
+                "✔",
+                "ok"
+              ],
+              [
+                "  4 ファイル、差分 61 行",
+                ""
+              ]
+            ],
+            [
+              [
+                "Step 2/5 変更の地図   ",
+                "dim"
+              ],
+              [
+                "✔",
+                "ok"
+              ],
+              [
+                "  本質 2 · 付随 1 · 意図不明 1",
+                ""
+              ]
+            ],
+            [
+              [
+                "Step 3/5 想定問答     ",
+                "dim"
+              ],
+              [
+                "✔",
+                "ok"
+              ],
+              [
+                "  あなたにしか答えられない質問 7",
+                ""
+              ]
+            ],
+            [
+              [
+                "Step 4/5 チェック     ",
+                "dim"
+              ],
+              [
+                "✔",
+                "ok"
+              ],
+              [
+                "  秘密情報らしき値 1 · 差分外の呼び出し元 1 · テスト変更なし",
                 "warn"
               ]
             ],
             [
               [
-                "## Test file changes",
-                "head"
-              ]
-            ],
-            [
+                "Step 5/5 PR_QA.md     ",
+                "dim"
+              ],
               [
-                "(no test changes <- expect a question about this)",
-                "warn"
-              ]
-            ],
-            [
+                "✔",
+                "ok"
+              ],
               [
-                "## Checks reviewers will ask whether you ran",
-                "head"
-              ]
-            ],
-            [
-              [
-                "- npm run test   - npm run lint   - CI: .github/workflows/ci.yml",
+                "  書き出し → .pr-grill/feature__rename/PR_QA.md",
                 ""
               ]
             ]
@@ -134,12 +104,6 @@
               [
                 "# PR QA: feature/rename",
                 "head"
-              ]
-            ],
-            [
-              [
-                "AI併用・この領域に過去2コミット、として進めます。違えば一言ください。",
-                "dim"
               ]
             ],
             [
