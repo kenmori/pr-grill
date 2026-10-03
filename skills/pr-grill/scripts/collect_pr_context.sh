@@ -73,6 +73,11 @@ HEAD_NAME=$(git rev-parse --abbrev-ref HEAD)
 
 # ---- output directory -----------------------------------------------------
 SLUG=$(printf '%s' "$HEAD_NAME" | sed 's#/#__#g')
+MIGRATED=""
+if [ -z "$OUT" ] && [ -z "${PR_GRILL_DIR:-}" ] && [ -d "$ROOT/.claude/pr-grill" ] && [ ! -e "$ROOT/.pr-grill" ]; then
+  # 0.2 wrote to .claude/pr-grill; carry the record, state and past PR_QA files over instead of silently starting fresh
+  if mv "$ROOT/.claude/pr-grill" "$ROOT/.pr-grill" 2>/dev/null; then MIGRATED="moved .claude/pr-grill/ (0.2 layout) to .pr-grill/; stats and past PR_QA files kept"; fi
+fi
 [ -z "$OUT" ] && OUT="${PR_GRILL_DIR:-$ROOT/.pr-grill}/$SLUG"   # PR_GRILL_DIR moves all output (and the stats log) elsewhere
 
 # ---- review-round mode (--since) ------------------------------------------------
@@ -168,6 +173,11 @@ if [ "$WT_COUNT" -gt 1 ]; then
   git worktree list | grep -v "^$ROOT " | sed 's/^/  other: /' | tee -a "$SUMMARY"
 fi
 [ -n "$EXCL_WARN" ] && out "$EXCL_WARN"
+[ -n "$MIGRATED" ] && out "Note: $MIGRATED"
+case "$OUT" in
+  "$ROOT"/*) [ "${OUT#"$ROOT"/.pr-grill}" = "$OUT" ] && ! git check-ignore -q "$OUT" 2>/dev/null \
+             && out "⚠ $OUT is inside the repository and not git-ignored: it holds the raw diff. Add it to .gitignore or use the default location." ;;
+esac
 # Past battles in this repo: lenses the author stumbled on recently come first in the Q&A
 STATS_SH="$(dirname "$0")/pr_grill_stats.sh"
 STATS_DIR_EFF="${PR_GRILL_DIR:-$ROOT/.pr-grill}"
@@ -191,7 +201,7 @@ if [ -n "$ME" ]; then
   BR_OTHERS=$(git log --format=%ae "$FULL_MB"..HEAD | grep -cvxF "$ME")
   BR_AI=$(git log --format=%B "$FULL_MB"..HEAD | grep -ciE '^co-authored-by:.*(claude|copilot|cursor|codex|gpt|gemini|devin|aider)')
   # shellcheck disable=SC2086  # CHANGED is a newline-separated list of paths without spaces in practice
-  [ -n "$CHANGED" ] && PAST=$(printf '%s\n' "$CHANGED" | xargs git log -n 500 --format=%ae "$FULL_MB" -- 2>/dev/null | grep -cxF "$ME")
+  [ -n "$CHANGED" ] && PAST=$(printf '%s\n' "$CHANGED" | tr '\n' '\0' | xargs -0 git log -n 500 --format=%ae "$FULL_MB" -- 2>/dev/null | grep -cxF "$ME")
 fi
 if [ "$BR_OTHERS" -gt "$BR_MINE" ]; then WROTE="inherited ($BR_OTHERS of $((BR_MINE + BR_OTHERS)) branch commits by others)"
 elif [ "$BR_AI" -gt 0 ]; then WROTE="ai ($BR_AI commit(s) carry an AI co-author trailer)"
@@ -349,8 +359,8 @@ BUDGET=$(( (N_FILES + 2) / 3 )); [ "$BUDGET" -lt 3 ] && BUDGET=3; [ "$BUDGET" -g
 out "Change notes budget: $BUDGET (1 per 3 changed files, min 3, max 10) of $HUNK_TOTAL hunks"
 head -60 "$OUT/hunks.tsv" | while IFS="$(printf '\t')" read -r hf hs he hk; do
   [ -z "$hf" ] && continue
-  if [ "$hs" = "$he" ]; then range="$hs"; lr="L$hs"; else range="$hs-$he"; lr="L$hs-L$he"; fi
-  line="- $hf:$range ($hk)"
+  if [ "$hs" = "$he" ]; then range=""; lr="L$hs"; else range=" ($hs-$he)"; lr="L$hs-L$he"; fi
+  line="- $hf:$hs$range ($hk)"   # path:line first so terminals link it; the range follows
   if [ -n "$GH_REPO" ]; then
     anchor=$(printf '%s' "$hf" | sha256_hex)
     line="$line  blob: https://github.com/$GH_REPO/blob/$HEAD_SHA/$hf#$lr"
@@ -375,7 +385,8 @@ if [ -n "$PR" ]; then
     printf '%s\n' "$THREADS" | while IFS="$(printf '\t')" read -r cid cpath cline cauthor cbody; do
       [ -z "$cid" ] && continue
       status="file untouched"
-      if printf '%s\n' "$CHANGED" | grep -qxF "$cpath"; then
+      if [ "$cline" = 0 ]; then status="outdated comment (no current line); check the thread by hand"
+      elif printf '%s\n' "$CHANGED" | grep -qxF "$cpath"; then
         status="file touched, not at this line"
         # Old-side hunk ranges in the delta: the reviewed commit's line numbers, which is what the comment refers to
         git diff -M -U0 "$MB" -- "$cpath" | sed -nE 's/^@@ -([0-9]+)(,([0-9]+))? .*/\1 \3/p' | while read -r hs hc; do

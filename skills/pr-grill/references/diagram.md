@@ -24,7 +24,7 @@ Draw as the engineer who has to live with the change, not as a decorator. A diag
 - Align to a grid: shared baselines, even gaps.
 - Put `path:line` under each node that maps to code, so the figure and `PR_QA.md` point at the same places.
 
-Start from `assets/diagram_template.html` (it holds the page chrome, theme CSS and the arrow marker). Replace the `<!-- SVG -->` block and the caption.
+Start from `assets/diagram_template.html` (page chrome, theme CSS, arrow marker). Replace every `{{…}}` placeholder and the `<!-- SVG -->` block; none may remain in the written file.
 
 ## Output
 Write `.pr-grill/<branch>/diagram.html` and print one line the terminal turns into a link:

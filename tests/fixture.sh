@@ -166,13 +166,24 @@ echo "# hunk index and GitHub links"
 git remote add origin git@github.com:acme/widgets.git
 bash "$SCRIPT" --pr 7 main > "$TMP/hunks.txt" 2>&1
 if command -v sha256sum >/dev/null 2>&1; then ANCHOR=$(printf '%s' "src/lib.ts" | sha256sum | cut -c1-64); else ANCHOR=$(printf '%s' "src/lib.ts" | shasum -a 256 | cut -c1-64); fi
-yes "hunk line with new-side range"                 grep -q '^- src/lib\.ts:1-2 (changed)' "$TMP/hunks.txt"
+yes "hunk line: single line first, then the range"  grep -q '^- src/lib\.ts:1 (1-2) (changed)' "$TMP/hunks.txt"
 yes "blob permalink at HEAD"                        grep -q "blob: https://github.com/acme/widgets/blob/$(git rev-parse HEAD)/src/lib.ts#L1-L2" "$TMP/hunks.txt"
 yes "change-notes budget scales with files"         grep -Eq '^Change notes budget: [0-9]+ \(1 per 3 changed files, min 3, max 10\)' "$TMP/hunks.txt"
 yes "PR files-changed anchor is sha256 of the path" grep -q "pr: https://github.com/acme/widgets/pull/7/files#diff-${ANCHOR}R1" "$TMP/hunks.txt"
 git remote remove origin
 bash "$SCRIPT" main > "$TMP/nolinks.txt" 2>&1
 yes "without a github remote: path:line only"       grep -q 'origin is not on github.com' "$TMP/nolinks.txt"
+
+echo "# 0.2 layout migration and non-ignored custom output"
+rm -rf "$REPO/.pr-grill"; mkdir -p "$REPO/.claude/pr-grill" && printf 'date=2026-01-01 branch=old nodes=1 code=1 author=0 approved=0 open=0 readiness=100 drill=- difficulty=- stumbled=- rounds=1 level=working\n' > "$REPO/.claude/pr-grill/stats.log"
+bash "$SCRIPT" main > "$TMP/mig.txt" 2>&1
+yes "old .claude/pr-grill is moved to .pr-grill"    test -f "$REPO/.pr-grill/stats.log"
+no  "old directory is gone after the move"          test -e "$REPO/.claude/pr-grill"
+yes "migration is announced"                        grep -q '^Note: moved .claude/pr-grill/' "$TMP/mig.txt"
+yes "migrated record feeds the header"              grep -q '^Past PRs in this repo: 1' "$TMP/mig.txt"
+bash "$SCRIPT" --out "$REPO/scratch-out" main > "$TMP/inrepo.txt" 2>&1
+yes "custom --out inside the repo warns"            grep -q 'inside the repository and not git-ignored' "$TMP/inrepo.txt"
+rm -rf "$REPO/scratch-out"
 
 echo "# inferred author profile"
 bash "$SCRIPT" main > "$TMP/prof.txt" 2>&1
@@ -207,6 +218,9 @@ yes "list shows readiness and drill"        sh -c "printf '%s' '$L' | grep -q 'f
 yes "list shows rounds and level"           sh -c "printf '%s' '$L' | grep -q 'feature/x.*90%.*6/8.*2 .*owner'"
 yes "level defaults to working"             sh -c "printf '%s' '$L' | grep -q 'fix/cache.*working'"
 no  "record rejects a bad --level"          sh -c "bash '$STATS' record --branch b --nodes 1 --code 1 --author 0 --approved 0 --open 0 --level guru 2>/dev/null"
+no  "record rejects counts that exceed nodes" sh -c "bash '$STATS' record --branch b --nodes 3 --code 2 --author 2 --approved 0 --open 0 2>/dev/null"
+no  "record rejects a space in --stumbled"   sh -c "bash '$STATS' record --branch b --nodes 1 --code 1 --author 0 --approved 0 --open 0 --stumbled 'ops tests' 2>/dev/null"
+yes "drill-only meter still shows the score" sh -c "bash '$STATS' meter --nodes 0 --code 0 --author 0 --approved 0 --drill 4/1/0 | grep -q 'no decision-tree nodes recorded.*Drill 4/5'"
 yes "weak-lens trend finds ops (3 of 3)"    sh -c "printf '%s' '$L' | grep -q 'ops (3 of last 3)'"
 no  "a lens hit once is not a trend"        sh -c "printf '%s' '$L' | grep -q 'security ('"
 no  "record rejects a bad --drill"          sh -c "bash '$STATS' record --branch b --nodes 1 --code 1 --author 0 --approved 0 --open 0 --drill 5-2 2>/dev/null"
@@ -216,6 +230,12 @@ mkdir -p "$REPO/.pr-grill" && cp "$TMP/stats/stats.log" "$REPO/.pr-grill/stats.l
 unset PR_GRILL_STATS_DIR
 bash "$SCRIPT" main > "$TMP/hdr.txt" 2>&1
 yes "collector header shows past PRs and weak lenses" grep -q 'Past PRs in this repo: 3  weak lenses lately: ops (3 of last 3)' "$TMP/hdr.txt"
+# records without stumbles must not turn "-" into a lens
+export PR_GRILL_STATS_DIR="$TMP/stats"
+printf 'date=2026-01-02 branch=a nodes=2 code=2 author=0 approved=0 open=0 readiness=100 drill=- difficulty=- stumbled=- rounds=1 level=working\n' >> "$TMP/stats/stats.log"
+printf 'date=2026-01-03 branch=b nodes=2 code=2 author=0 approved=0 open=0 readiness=100 drill=- difficulty=- stumbled=- rounds=1 level=working\n' >> "$TMP/stats/stats.log"
+no  "no-stumble records do not create a '-' trend" sh -c "bash '$STATS' list | grep -q -- '- ('"
+unset PR_GRILL_STATS_DIR
 
 echo "# with a test change"
 printf 'test("y", () => {})\n' >> tests/lib.test.ts
