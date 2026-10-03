@@ -174,7 +174,32 @@ if [ -x "$STATS_SH" ] && [ -f "$ROOT/.claude/pr-grill/stats.log" ]; then
   WEAK=$(PR_GRILL_STATS_DIR="$ROOT/.claude/pr-grill" "$STATS_SH" weak | tr '\n' ';' | sed 's/;$//; s/;/; /g')
   out "Past PRs in this repo: $(grep -c . "$ROOT/.claude/pr-grill/stats.log")${WEAK:+  weak lenses lately: $WEAK  <- lead the Q&A with these}"
 fi
+DIFF_LINES=$(git diff -M "$MB" -- . "${EXCLUDE[@]}" | wc -l | tr -d ' ')
+N_FILES=$(printf '%s\n' "$CHANGED" | grep -c .)
+if [ "$DIFF_LINES" -le 300 ]; then PLAN="inline (printed at the end of this summary)"; else PLAN="per-file patches under diff/ — read essential changes first"; fi
+out "Reading plan: $N_FILES files, $DIFF_LINES diff lines → $PLAN"
 out "Output: $OUT"
+
+# Who the author is, inferred from git so the skill does not have to ask:
+#   wrote  = self | ai | inherited   (branch commits by others, or AI co-author trailers)
+#   knows  = new | some | owner      (past commits by the current user on the changed files)
+ME=$(git config user.email 2>/dev/null || true)
+BR_MINE=0; BR_OTHERS=0; BR_AI=0; PAST=0
+if [ -n "$ME" ]; then
+  BR_MINE=$(git log --format=%ae "$FULL_MB"..HEAD | grep -cxF "$ME")
+  BR_OTHERS=$(git log --format=%ae "$FULL_MB"..HEAD | grep -cvxF "$ME")
+  BR_AI=$(git log --format=%B "$FULL_MB"..HEAD | grep -ciE '^co-authored-by:.*(claude|copilot|cursor|codex|gpt|gemini|devin|aider)')
+  # shellcheck disable=SC2086  # CHANGED is a newline-separated list of paths without spaces in practice
+  [ -n "$CHANGED" ] && PAST=$(printf '%s\n' "$CHANGED" | xargs git log -n 500 --format=%ae "$FULL_MB" -- 2>/dev/null | grep -cxF "$ME")
+fi
+if [ "$BR_OTHERS" -gt "$BR_MINE" ]; then WROTE="inherited ($BR_OTHERS of $((BR_MINE + BR_OTHERS)) branch commits by others)"
+elif [ "$BR_AI" -gt 0 ]; then WROTE="ai ($BR_AI commit(s) carry an AI co-author trailer)"
+else WROTE="self"; fi
+if [ "$PAST" -ge 5 ]; then KNOWS="owner ($PAST past commits by you on these files)"
+elif [ "$PAST" -ge 1 ]; then KNOWS="some ($PAST past commit(s) by you on these files)"
+else KNOWS="new (no past commits by you on these files)"; fi
+section "Author profile (inferred from git; the author can correct it in one line)"
+out "wrote=$WROTE" "knows=$KNOWS"
 
 section "Uncommitted changes (git status)"
 git status --short | pipe "(none)"

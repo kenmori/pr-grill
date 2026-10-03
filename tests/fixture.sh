@@ -160,6 +160,24 @@ bash "$SCRIPT" --since last main > /dev/null 2>"$TMP/nostate.err"
 yes "--since last without a state file explains"   grep -q 'needs a previous run' "$TMP/nostate.err"
 OUT="$OUTDIR/summary.md"
 
+echo "# inferred author profile"
+bash "$SCRIPT" main > "$TMP/prof.txt" 2>&1
+yes "profile: wrote=self when every branch commit is the user's" grep -q '^wrote=self' "$TMP/prof.txt"
+yes "profile: knows=some from the user's past commits"           grep -q '^knows=some (' "$TMP/prof.txt"
+yes "header shows the reading plan"                              grep -Eq '^Reading plan: [0-9]+ files, [0-9]+ diff lines → ' "$TMP/prof.txt"
+git commit -q --allow-empty -m "ai-assisted
+
+Co-Authored-By: Claude <noreply@anthropic.com>"
+bash "$SCRIPT" main > "$TMP/prof2.txt" 2>&1
+yes "profile: wrote=ai from a Co-Authored-By trailer"            grep -q '^wrote=ai (1 commit' "$TMP/prof2.txt"
+git -c user.email=other@example.com -c user.name=other commit -q --allow-empty -m "by someone else"
+git -c user.email=other@example.com -c user.name=other commit -q --allow-empty -m "by someone else 2"
+git -c user.email=other@example.com -c user.name=other commit -q --allow-empty -m "by someone else 3"
+git -c user.email=other@example.com -c user.name=other commit -q --allow-empty -m "by someone else 4"
+# branch now has 3 commits by the user (rename, fix, ai-assisted) and 4 by someone else
+bash "$SCRIPT" main > "$TMP/prof3.txt" 2>&1
+yes "profile: wrote=inherited when others wrote most commits"    grep -q '^wrote=inherited (4 of 7' "$TMP/prof3.txt"
+
 echo "# battle record (pr_grill_stats.sh)"
 STATS="$HERE/../skills/pr-grill/scripts/pr_grill_stats.sh"
 export PR_GRILL_STATS_DIR="$TMP/stats"

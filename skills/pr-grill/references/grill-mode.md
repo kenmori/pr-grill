@@ -9,7 +9,7 @@ Difference from Drill: Drill is an **exam**, so answers stay hidden. Grill is ab
 Arrange the PR's design decisions as a dependency tree. An upstream answer changes the downstream questions, so **always resolve from the root**.
 
 ```
-root: why is this change needed (problem, trigger)
+root: what problem does this change solve (anchored to the essential hunk); what goes wrong without it
 └ definition of done: what must hold for this to be complete / what was left out of scope
   └ approach: why this way (one branch per rejected alternative)
     └ individual decisions: placement, data structures, API shape, naming, new dependencies …
@@ -27,17 +27,23 @@ The five exit-bar items (SKILL.md, Step 0.5) are always in the tree: "what" sits
 Reason: these exist only in the author's head. Showing a plausible reason first invites a reflexive "yes, that" — Claude's fabricated intent then gets the author's stamp on it. That is the exact opposite of the core rule.
 **After** the author answers, if Claude's reading of the code disagrees, say so right there ("the code reads to me like X — is that wrong?").
 
-Format:
+Format (the hunk first, then the question; `path:line` as its own token so it is clickable):
 ```
-**Q<n>/<approx. remaining>** <question> (see: file:line)
+**Q<n>/<approx. remaining>**  src/lib.ts:1-3
+-export function oldName(a) {
++export function newName(a) {
+What problem does this change solve? What goes wrong if it is not made?
 ```
+Never ask "why is this change needed?" without the hunk: the author cannot tell whether you mean the whole PR or one line. Never ask "who asked for it?": if a ticket or request exists, the author will mention it when explaining the problem.
 
 ### All other nodes
 Individual decisions, edge cases, tests and release may come with a suggested answer derived from the code and its surroundings.
 
 Format:
 ```
-**Q<n>/<approx. remaining>** <question> (see: file:line)
+**Q<n>/<approx. remaining>**  src/lib.ts:12-18
+<hunk, ≤ 12 lines, when the node is about a change>
+<question>
 Suggested: <the most plausible answer, with the evidence in a few words>
 ```
 
