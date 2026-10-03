@@ -4,7 +4,7 @@
 # Usage: collect_pr_context.sh [options] [base-branch]
 #   --out DIR    output directory (default: <repo>/.claude/pr-grill/<branch>)
 #   --no-diff    do not write per-file patches (diff/*.patch)
-#   --stdout     always print the full diff to stdout (default: only when <= 600 lines)
+#   --stdout     always print the full diff to stdout (default: only when <= 300 lines)
 #   --since REF  review-round mode: diff from REF (a commit, or "last" = the HEAD recorded by the
 #                previous run) instead of from the merge-base. Use after pushing fixes for a review.
 #   --pr N       with gh installed: list PR #N's review threads and whether the diff touches each one
@@ -168,6 +168,12 @@ if [ "$WT_COUNT" -gt 1 ]; then
   git worktree list | grep -v "^$ROOT " | sed 's/^/  other: /' | tee -a "$SUMMARY"
 fi
 [ -n "$EXCL_WARN" ] && out "$EXCL_WARN"
+# Past battles in this repo: lenses the author stumbled on recently come first in the Q&A
+STATS_SH="$(dirname "$0")/pr_grill_stats.sh"
+if [ -x "$STATS_SH" ] && [ -f "$ROOT/.claude/pr-grill/stats.log" ]; then
+  WEAK=$(PR_GRILL_STATS_DIR="$ROOT/.claude/pr-grill" "$STATS_SH" weak | tr '\n' ';' | sed 's/;$//; s/;/; /g')
+  out "Past PRs in this repo: $(grep -c . "$ROOT/.claude/pr-grill/stats.log")${WEAK:+  weak lenses lately: $WEAK  <- lead the Q&A with these}"
+fi
 out "Output: $OUT"
 
 section "Uncommitted changes (git status)"
@@ -348,7 +354,7 @@ fi
 out "Full diff: $OUT/full.diff"
 # Remember this run so the next one can offer --since last
 printf 'last_head=%s\nlast_run=%s\nbase=%s\n' "$(git rev-parse HEAD)" "$(date '+%Y-%m-%d %H:%M')" "$BASE" > "$OUT/state"
-if [ "$FORCE_STDOUT" = 1 ] || [ "$DIFF_LINES" -le 600 ]; then
+if [ "$FORCE_STDOUT" = 1 ] || [ "$DIFF_LINES" -le 300 ]; then
   out "" '```diff'; cat "$OUT/full.diff" | tee -a "$SUMMARY"; out '```'
 else
   out "" "(${DIFF_LINES} lines is too large for stdout. Read the per-file patches above, essential changes first.)"

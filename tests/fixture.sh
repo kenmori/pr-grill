@@ -160,6 +160,29 @@ bash "$SCRIPT" --since last main > /dev/null 2>"$TMP/nostate.err"
 yes "--since last without a state file explains"   grep -q 'needs a previous run' "$TMP/nostate.err"
 OUT="$OUTDIR/summary.md"
 
+echo "# battle record (pr_grill_stats.sh)"
+STATS="$HERE/../skills/pr-grill/scripts/pr_grill_stats.sh"
+export PR_GRILL_STATS_DIR="$TMP/stats"
+yes "list before any record explains"       sh -c "bash '$STATS' list | grep -q 'No record yet'"
+M=$(bash "$STATS" meter --nodes 10 --code 4 --author 4 --approved 1 --open 1)
+yes "meter: readiness 85% with approved at half" sh -c "printf '%s' '$M' | grep -q 'Readiness ████████░░ 85%'"
+bash "$STATS" record --branch feat/login --pr 12 --nodes 10 --code 4 --author 4 --approved 1 --open 1 --drill 5/2/1 --difficulty normal --stumbled ops,security > /dev/null
+bash "$STATS" record --branch fix/cache --nodes 8 --code 6 --author 2 --approved 0 --open 0 --stumbled ops > /dev/null
+bash "$STATS" record --branch feature/x --nodes 10 --code 5 --author 3 --approved 2 --open 0 --drill 6/1/1 --stumbled ops,tests --rounds 2 > /dev/null
+yes "three records written"                 test "$(grep -c . "$TMP/stats/stats.log")" = 3
+L=$(bash "$STATS" list)
+yes "list shows readiness and drill"        sh -c "printf '%s' '$L' | grep -q 'feat/login.*12 .*85%.*5/8'"
+yes "list shows rounds"                     sh -c "printf '%s' '$L' | grep -q 'feature/x.*90%.*6/8.*2'"
+yes "weak-lens trend finds ops (3 of 3)"    sh -c "printf '%s' '$L' | grep -q 'ops (3 of last 3)'"
+no  "a lens hit once is not a trend"        sh -c "printf '%s' '$L' | grep -q 'security ('"
+no  "record rejects a bad --drill"          sh -c "bash '$STATS' record --branch b --nodes 1 --code 1 --author 0 --approved 0 --open 0 --drill 5-2 2>/dev/null"
+no  "record requires --branch"              sh -c "bash '$STATS' record --nodes 1 --code 1 --author 0 --approved 0 --open 0 2>/dev/null"
+# the collector surfaces the trend in its header when the log lives in the repo's .claude/pr-grill
+mkdir -p "$REPO/.claude/pr-grill" && cp "$TMP/stats/stats.log" "$REPO/.claude/pr-grill/stats.log"
+unset PR_GRILL_STATS_DIR
+bash "$SCRIPT" main > "$TMP/hdr.txt" 2>&1
+yes "collector header shows past PRs and weak lenses" grep -q 'Past PRs in this repo: 3  weak lenses lately: ops (3 of last 3)' "$TMP/hdr.txt"
+
 echo "# with a test change"
 printf 'test("y", () => {})\n' >> tests/lib.test.ts
 bash "$SCRIPT" main > /dev/null 2>&1

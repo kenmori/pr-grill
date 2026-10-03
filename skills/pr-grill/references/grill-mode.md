@@ -71,3 +71,4 @@ Closing steps (turn the interview into something usable):
    - Code comments: where "why" is non-obvious (the spots the author struggled to explain are the candidates).
    - CLAUDE.md / ADR: decisions and conventions that will keep applying in this repo.
 4. List the nodes the author stumbled on, and the ones still `[approved]`, as the places reviewers are most likely to push.
+5. Record the battle: `scripts/pr_grill_stats.sh record --branch <branch> --nodes N --code N --author N --approved N --open N --stumbled <lens ids>` (SKILL.md, "Readiness and the battle record"). Show the meter line it prints and put it at the top of `PR_QA.md`.

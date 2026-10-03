@@ -26,6 +26,7 @@ Test how well the author actually understands the change and find what they cann
    - Intent questions without a reason → the hand-off list for Grill.
    - Every × is a place to re-read before opening the PR.
    - If the author could not answer because the code itself is hard to read, list it as a comment/refactor candidate inside the PR.
+   - Record the result: `scripts/pr_grill_stats.sh record --branch <branch> --drill PERFECT/PARTIAL/WRONG --difficulty <level> --stumbled <lens ids>` plus the node counts if a Grill already ran (otherwise `--nodes 0 --code 0 --author 0 --approved 0 --open 0`). Only fact questions count toward the score.
 
 ## Difficulty
 "Normal" unless the user says otherwise.

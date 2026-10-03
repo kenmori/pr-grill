@@ -1,5 +1,7 @@
 # PR QA: <branch / PR title>
 
+<readiness meter line from `pr_grill_stats.sh meter`; refresh at every Grill checkpoint>
+
 ## One-sentence summary
 
 ## ⚠ Top priority (secrets · callers outside the diff · untracked files)

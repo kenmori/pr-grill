@@ -78,6 +78,16 @@ skills/pr-grill/scripts/collect_pr_context.sh [--out DIR] [--no-diff] [--stdout]
 
 出力する内容は次のとおりです。baseの鮮度、未追跡ファイル、除外した生成物、テスト変更の有無、CODEOWNERS、要注意パターンと秘密情報らしき値(`ファイル:行`付き)、変更されたシグネチャ、差分外の呼び出し元(更新し忘れたもの)、リポジトリのレビュー規約、レビュアーが「実行した?」と聞くチェック。大きい差分は`diff/`にファイル別に分割します。
 
+## 戦績
+
+Grill、Drill、Reviseを終えるたびに、`.claude/pr-grill/stats.log`(git管理外、リポジトリごと)に1行が残ります。
+
+```
+Readiness ████████░░ 85%  (code 4 · author 4 · approved 1 · open 1 of 10)  Drill 5/8  Stumbled: ops, tests
+```
+
+Readinessは、設計判断のうち自分の言葉で説明できた割合です。`[approved]`(Claudeの推測に同意しただけ)は半分に数えます。「戦績見せて」と言うと、過去のPRの一覧と、繰り返し詰まっているレンズが出ます。次のBriefは、そのレンズの質問から始まります。過去の`PR_QA.md`は`.claude/pr-grill/<ブランチ名>/`に、消すまで残ります。
+
 ## 出力例
 
 [`examples/PR_QA.example.md`](examples/PR_QA.example.md)は、このリポジトリ自身のPRにスキルをかけて作ったBriefの出力です。
