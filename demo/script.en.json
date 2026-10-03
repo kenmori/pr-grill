@@ -228,7 +228,7 @@
             ],
             [
               [
-                "      What problem does this change solve? What goes wrong if it is not made?",
+                "      What does this function actually do, and what did oldName make a reader expect that is false?",
                 "q"
               ]
             ]
@@ -253,14 +253,14 @@
                 "head"
               ],
               [
-                "   What problem does this change solve? What goes wrong without it?",
+                "   What does this function actually do, and what did oldName make a reader expect that is false?",
                 "q"
               ]
             ]
           ]
         },
         {
-          "in": "Names were inconsistent across modules; on-call misread a log last week (INC-212)."
+          "in": "It only returns its argument, but oldName read as a transformation; on-call misread a log that way last week (INC-212)."
         },
         {
           "out": [
@@ -270,8 +270,24 @@
                 "ok"
               ],
               [
-                "   Readiness ████░░░░░░ 40%",
+                "  specific: yes (INC-212) · consistent: yes · missing: which caller depends on the new name",
+                "dim"
+              ]
+            ],
+            [
+              [
+                "[code] src/caller.ts:1 is the only import and still uses oldName.",
+                "dim"
+              ]
+            ],
+            [
+              [
+                "Readiness ████░░░░░░ 40%",
                 "meter"
+              ],
+              [
+                "  model answer written to PR_QA.md",
+                "dim"
               ]
             ],
             [

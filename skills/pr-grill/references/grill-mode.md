@@ -47,6 +47,35 @@ Format:
 Suggested: <the most plausible answer, with the evidence in a few words>
 ```
 
+### Ask about the thing, not the motive
+A question that only asks "why did you do this?" gets a one-line motive and teaches nothing. Each question must go into the **substance of what changed**: what the code does, what a reader of it believes, which caller depends on which promise, what invariant holds. Derive the question from the hunk, e.g.
+
+| Change | Weak question | Question that reaches the substance |
+|---|---|---|
+| rename `oldName` → `newName` | why rename? | What does this function actually do, and what did `oldName` make a reader expect that is false? Which caller relies on what `newName` now promises? |
+| new `if` branch | why add this check? | Which input reaches this branch, where does it come from, and what did the code do with it before? |
+| new dependency | why add it? | Which function of it do you call, what did you replace, and what happens on its failure path? |
+| changed default value | why 30? | Who reads this value, what did they get before, and which of them notices the difference? |
+| deleted code | why remove? | What called this, and what do those callers get now? |
+
+### After every answer: grade, explain, model answer
+Do all three, briefly, in that order, before the next question:
+1. **Grade the answer on three points** (one line each):
+   - *Specific?* It names a file, function, caller, input, case or number. Vague words ("for consistency", "cleaner", "just in case", "best practice") get the answer sent back once: "which caller / which input / which case?"
+   - *Consistent with the code?* Quote `path:line` where it is not.
+   - *Complete for a reviewer?* Name the element a reviewer would still ask for (the caller, the failure path, the test).
+2. **Explain** what the code itself shows about this node, as `[code]` with `path:line`, including anything the author did not mention.
+3. **Model answer**: rewrite the author's answer into the form a reviewer wants, **built only from the author's words plus `[code]` facts**. Mark intent parts as the author's, evidence parts with `path:line`. Never invent a reason the author did not give; where a reason is still missing, leave a visible gap ("reason: — (yours)"). This text goes into `PR_QA.md` as the node's answer and later into the PR description.
+
+Example turn after the author answers "names were inconsistent; on-call misread a log last week (INC-212)":
+```
+Specific: yes (INC-212, the log line). Consistent: yes. Missing: which caller depends on the new promise.
+[code] src/lib.ts:1 returns its argument unchanged; src/caller.ts:1 is the only import and still uses oldName.
+Model answer: `oldName` only echoes its input (src/lib.ts:1-3), but the old name read as a transformation, which
+is how on-call misread the log in INC-212 (author). Renamed to `newName`; the single caller src/caller.ts:1
+must follow — it does not yet.
+```
+
 ### Shared rules
 - One question per turn. Never batch (it confuses the author and yields shallow answers).
 - Before asking, exhaust what the environment can tell you. Use what you found as evidence in the question or the suggestion.

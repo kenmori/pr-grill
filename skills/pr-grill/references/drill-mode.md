@@ -16,6 +16,8 @@ Test how well the author actually understands the change and find what they cann
    - When an answer contradicts the code, point at file:line and say so plainly. Do not grade softly.
    - **Before giving × or △, re-read the relevant lines.** The worst outcome is Claude misreading the code and marking the author wrong. If the re-read shows Claude was wrong, void the question and say so.
    - On △/×, give one hint before revealing the answer.
+   - Specificity counts: an answer with no file, function, caller, input or number is at most ○, however right its direction.
+   - After grading, give the explanation and the model answer exactly as Grill does (`grill-mode.md`, "After every answer"): `[code]` facts with `path:line`, then a model answer built from the author's words plus those facts.
 
    **Intent questions** (why needed, why this approach, why X not Y):
    - No right/wrong. The author's answer is the truth; Claude has no answer key.
