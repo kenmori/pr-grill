@@ -1,0 +1,476 @@
+{
+  "title": "pr-grill — 台本付きデモ(収集スクリプトの出力は本物、対話は再現)",
+  "scenes": [
+    {
+      "events": [
+        {
+          "in": "PR出す前に自分の変更を理解したい"
+        },
+        {
+          "out": [
+            [
+              [
+                "Step 1/5 収集 · 2/5 変更の地図 · 3/5 想定問答 · 4/5 チェック · 5/5 PR_QA.md",
+                "dim"
+              ]
+            ],
+            [
+              [
+                "scripts/collect_pr_context.sh main を実行中…",
+                "dim"
+              ]
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "events": [
+        {
+          "out": [
+            [
+              [
+                "## BASE: main  HEAD: feature/rename  merge-base: 89acda59",
+                "head"
+              ]
+            ],
+            [
+              [
+                "Reading plan: 4 files, 61 diff lines → inline",
+                "dim"
+              ]
+            ],
+            [
+              [
+                "## Author profile (inferred from git)",
+                "head"
+              ]
+            ],
+            [
+              [
+                "wrote=ai (2 commits carry an AI co-author trailer)   knows=some (2 past commits by you)",
+                ""
+              ]
+            ],
+            [
+              [
+                "## Untracked files (⚠ NOT included in the diff below)",
+                "head"
+              ]
+            ],
+            [
+              [
+                "src/brand_new.ts",
+                ""
+              ]
+            ],
+            [
+              [
+                "## Secret-shaped values (⚠ check these first; masked here, NOT in full.diff)",
+                "head"
+              ]
+            ],
+            [
+              [
+                "src/clock.ts:3: const apiKey = \"sk-a…[masked]\"",
+                "warn"
+              ]
+            ],
+            [
+              [
+                "## Caller candidates (defining file excluded)",
+                "head"
+              ]
+            ],
+            [
+              [
+                "### oldName (defined in src/lib.ts)",
+                ""
+              ]
+            ],
+            [
+              [
+                "src/caller.ts:1: import { oldName } from \"./lib\"",
+                ""
+              ],
+              [
+                "   <- outside diff (possibly not updated)",
+                "warn"
+              ]
+            ],
+            [
+              [
+                "## Test file changes",
+                "head"
+              ]
+            ],
+            [
+              [
+                "(no test changes <- expect a question about this)",
+                "warn"
+              ]
+            ],
+            [
+              [
+                "## Checks reviewers will ask whether you ran",
+                "head"
+              ]
+            ],
+            [
+              [
+                "- npm run test   - npm run lint   - CI: .github/workflows/ci.yml",
+                ""
+              ]
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "events": [
+        {
+          "out": [
+            [
+              [
+                "# PR QA: feature/rename",
+                "head"
+              ]
+            ],
+            [
+              [
+                "AI併用・この領域に過去2コミット、として進めます。違えば一言ください。",
+                "dim"
+              ]
+            ],
+            [
+              [
+                "理解度 ███░░░░░░░ 30%",
+                "meter"
+              ],
+              [
+                "  (コード根拠 3 · 作者回答 0 · 作者承認 0 · 未解決 7 / 10)",
+                "dim"
+              ]
+            ],
+            [
+              [
+                "## ほぼ確実に聞かれる3問",
+                "head"
+              ]
+            ],
+            [
+              [
+                "1. src/caller.ts がまだ oldName を import しているのはなぜ?",
+                ""
+              ],
+              [
+                "   [コード根拠]",
+                "ok"
+              ],
+              [
+                " src/caller.ts:1",
+                "dim"
+              ]
+            ],
+            [
+              [
+                "2. \"sk-a…\" は本物の鍵? なぜ差分に入っている?",
+                ""
+              ],
+              [
+                "   [作者確認]",
+                "ask"
+              ]
+            ],
+            [
+              [
+                "3. テストが変わっていない。リネームは何がカバーしている?",
+                ""
+              ],
+              [
+                "   [作者確認]",
+                "ask"
+              ]
+            ],
+            [
+              [
+                "",
+                ""
+              ]
+            ],
+            [
+              [
+                "あなたにしか答えられない質問が7つ。最初の1問(決定木の根):",
+                "dim"
+              ]
+            ],
+            [
+              [
+                "Q1/7  ",
+                "q"
+              ],
+              [
+                "src/lib.ts:1-3",
+                "head"
+              ]
+            ],
+            [
+              [
+                "      -export function oldName(a) {",
+                "warn"
+              ]
+            ],
+            [
+              [
+                "      +export function newName(a) {",
+                "ok"
+              ]
+            ],
+            [
+              [
+                "      この関数は実際に何をしていて、oldName という名前は読み手に何を誤解させましたか?",
+                "q"
+              ]
+            ]
+          ]
+        },
+        {
+          "in": "詰めて"
+        }
+      ]
+    },
+    {
+      "events": [
+        {
+          "out": [
+            [
+              [
+                "Q1/7  ",
+                "q"
+              ],
+              [
+                "src/lib.ts:1-3",
+                "head"
+              ],
+              [
+                "   この関数は実際に何をしていて、oldName という名前は読み手に何を誤解させましたか?",
+                "q"
+              ]
+            ]
+          ]
+        },
+        {
+          "in": "引数をそのまま返すだけ。でも oldName は変換に見えて、先週 on-call がログを読み違えた(INC-212)。"
+        },
+        {
+          "out": [
+            [
+              [
+                "✔ [作者回答]",
+                "ok"
+              ],
+              [
+                "  具体的: ○(INC-212) · コードと整合: ○ · 不足: 新しい名前に依存する呼び出し元",
+                "dim"
+              ]
+            ],
+            [
+              [
+                "[コード根拠] src/caller.ts:1 が唯一の import で、まだ oldName のまま。",
+                "dim"
+              ]
+            ],
+            [
+              [
+                "理解度 ████░░░░░░ 40%",
+                "meter"
+              ],
+              [
+                "  解答例を PR_QA.md に記録",
+                "dim"
+              ]
+            ],
+            [
+              [
+                "Q2/7  ",
+                "q"
+              ],
+              [
+                "src/lib.ts:1",
+                "head"
+              ],
+              [
+                "   ここでの完了とは? スコープ外にした呼び出し元は?",
+                "q"
+              ]
+            ]
+          ]
+        },
+        {
+          "in": "lib.ts とその呼び出し元だけ。CLI は v3 まで旧名のまま。"
+        },
+        {
+          "out": [
+            [
+              [
+                "✔ [作者回答]",
+                "ok"
+              ],
+              [
+                "   理解度 █████░░░░░ 50%",
+                "meter"
+              ]
+            ],
+            [
+              [
+                "Q3/7  ",
+                "q"
+              ],
+              [
+                "src/lib.ts:1",
+                "head"
+              ],
+              [
+                "   なぜリネーム? oldName を非推奨の別名として残す案は?",
+                "q"
+              ]
+            ],
+            [
+              [
+                "      (推奨回答なし。却下案はあなたの判断です)",
+                "dim"
+              ]
+            ]
+          ]
+        },
+        {
+          "in": "今日はここまで"
+        }
+      ]
+    },
+    {
+      "events": [
+        {
+          "out": [
+            [
+              [
+                "理解度 █████░░░░░ 50%",
+                "meter"
+              ],
+              [
+                "  (コード根拠 3 · 作者回答 2 · 作者承認 0 · 未解決 5 / 10)  詰まり: tests",
+                "dim"
+              ]
+            ],
+            [
+              [
+                ".claude/pr-grill/stats.log に記録しました(1 PR目)",
+                "dim"
+              ]
+            ],
+            [
+              [
+                "",
+                ""
+              ]
+            ],
+            [
+              [
+                "PRを出す前に残っているもの:",
+                "head"
+              ]
+            ],
+            [
+              [
+                "  • src/caller.ts がまだ oldName を import",
+                ""
+              ],
+              [
+                "          [コード根拠]",
+                "ok"
+              ]
+            ],
+            [
+              [
+                "  • src/clock.ts の sk-a… の値",
+                ""
+              ],
+              [
+                "                      [作者確認]",
+                "ask"
+              ]
+            ],
+            [
+              [
+                "  • Q3: 別名+非推奨警告ではない理由",
+                ""
+              ],
+              [
+                "              [作者確認]",
+                "ask"
+              ]
+            ],
+            [
+              [
+                "",
+                ""
+              ]
+            ],
+            [
+              [
+                "PR_QA.md → .claude/pr-grill/feature__rename/PR_QA.md  (git管理外)",
+                "dim"
+              ]
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "card": [
+        [
+          [
+            "pr-grill",
+            "title"
+          ]
+        ],
+        [
+          [
+            "自分のPRを、レビューで守れるところまで理解する。",
+            ""
+          ]
+        ],
+        [
+          [
+            "",
+            ""
+          ]
+        ],
+        [
+          [
+            "/plugin marketplace add kenmori/pr-grill",
+            "meter"
+          ]
+        ],
+        [
+          [
+            "/plugin install pr-grill@pr-grill",
+            "meter"
+          ]
+        ],
+        [
+          [
+            "",
+            ""
+          ]
+        ],
+        [
+          [
+            "台本付きデモ: 収集スクリプトの出力は本物、対話は再現です。",
+            "dim"
+          ]
+        ]
+      ]
+    }
+  ]
+}

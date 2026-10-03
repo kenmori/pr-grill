@@ -52,3 +52,4 @@ Produce, for the author to post (never post yourself):
 3. The list of fixes where the author stumbled in step 3: these are what the re-review will probe.
 
 Every run records its HEAD in `state`, so the next round's `--since last` starts from this one.
+Then update the battle record with `scripts/pr_grill_stats.sh record … --rounds <n>` using the current node counts, so the stats show how many rounds this PR took.

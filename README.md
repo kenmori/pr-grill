@@ -6,6 +6,48 @@ It is for the *author*, not the reviewer. It reads your diff, maps the blast rad
 
 [日本語版 README](README.ja.md)
 
+![pr-grill demo: Brief, then Grill one question at a time, ending with the readiness meter](demo/pr-grill.en.svg)
+
+<sub>Scripted demo (48 s): the collector output is real, the dialogue is re-enacted. [MP4 version](demo/pr-grill.en.mp4).</sub>
+
+## How a PR goes through it
+
+```
+write the change
+   │
+   ▼
+Brief    "I want to understand my change"   → change map, blast radius, labelled Q&A → PR_QA.md
+   │
+   ▼
+Grill    "grill me"                          → every [ask author] resolved, one question per turn
+   │
+   ▼
+open the PR
+   │
+   ▼
+Reply    paste review comments               → classified, evidence-based reply drafts
+   │
+   ▼
+Revise   "I pushed the fixes"                → only the delta since the review, fix-by-fix questions,
+   │                                           re-review summary for the reviewer
+   ▼
+merge    → one line in your record (readiness %, weak lenses); Drill any time for a rehearsal
+```
+
+## Any starting level, one finish line
+
+The first turn asks two things: who wrote the change (you / AI under your direction / someone else, you took it over) and how well you know this part of the code. That sets the **path**: a newcomer gets a plain-language walkthrough before any question and hints in Drill; an owner skips the narration, gets no suggested answers in Grill (they anchor like anyone else) and a brutal Drill.
+
+The **finish line is the same for everyone**, five questions you must answer in your own words before the session counts as done:
+
+1. What this PR changes, in one sentence a teammate outside the project would understand.
+2. What breaks and what gets fixed if it is reverted tomorrow.
+3. Who calls the changed code, and which caller is most at risk.
+4. The edge case most likely to bite, and what the code does there.
+5. How anyone would notice in production that it broke.
+
+If you inherited the branch, "ask the author" becomes "ask the original author": the skill finds them in `git log` and hands you the list of questions to take to them, and only grills you on what you changed since.
+
 ## What you get
 
 Every answer in the generated `PR_QA.md` carries one of these labels:
@@ -33,6 +75,15 @@ Labels are rendered in whatever language you talk to Claude in. That separation 
 Extra checks in Brief: accountability check for AI-generated hunks ("what breaks without this line?"), revert thought experiment, rejected-alternatives ledger, 3 a.m. incident test, PR description vs. diff consistency, unintended promises, unexecuted CI checks, reviewer prediction from CODEOWNERS.
 
 ## Install
+
+As a Claude Code plugin (recommended; updates with `/plugin update`):
+
+```
+/plugin marketplace add kenmori/pr-grill
+/plugin install pr-grill@pr-grill
+```
+
+With the skills CLI:
 
 ```bash
 npx skills add kenmori/pr-grill
@@ -68,6 +119,16 @@ skills/pr-grill/scripts/collect_pr_context.sh [--out DIR] [--no-diff] [--stdout]
 `--since` switches to review-round mode: every section covers only the commits since `REF` (or since the previous run, with `last`). `--pr N` adds, when `gh` is installed, each review thread on the PR and whether the diff touches it.
 
 It reports base freshness, untracked files, excluded generated files, test changes, CODEOWNERS, suspicious additions and secret-shaped values with `file:line`, changed signatures, callers **outside the diff** (the ones you forgot to update), repo review conventions, and the checks reviewers will ask whether you ran. Large diffs are split per file under `diff/`.
+
+## Your record
+
+Every Grill, Drill or Revise session ends with a line in `.claude/pr-grill/stats.log` (git-ignored, per repository):
+
+```
+Readiness ████████░░ 85%  (code 4 · author 4 · approved 1 · open 1 of 10)  Drill 5/8  Stumbled: ops, tests
+```
+
+Readiness is the share of design decisions you can explain in your own words; `[approved]` (you only agreed with Claude's guess) counts half. "Show my stats" prints the table of past PRs and the lenses you keep stumbling on; the next Brief leads with questions from those lenses. Past `PR_QA.md` files stay under `.claude/pr-grill/<branch>/` until you delete them.
 
 ## Example
 

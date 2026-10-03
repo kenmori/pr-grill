@@ -2,9 +2,9 @@
 
 Use only the lenses the change touches. The example questions are templates: adapt them to the diff instead of pasting them.
 
-## Index
-1. Purpose & scope 2. Correctness & edge cases 3. Design & responsibility 4. Tests 5. Types & API contracts
-6. Performance 7. Security 8. Operations & incidents 9. Compatibility & migration 10. UI/UX 11. Non-engineers (PM / leadership)
+## Index (id in parentheses, used by `pr_grill_stats.sh --stumbled`)
+1. Purpose & scope (purpose) 2. Correctness & edge cases (correctness) 3. Design & responsibility (design) 4. Tests (tests) 5. Types & API contracts (types)
+6. Performance (perf) 7. Security (security) 8. Operations & incidents (ops) 9. Compatibility & migration (compat) 10. UI/UX (ui) 11. Non-engineers (non-eng)
 
 ## 1. Purpose & scope
 - Why now? Which issue or background?

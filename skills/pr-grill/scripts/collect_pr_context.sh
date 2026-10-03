@@ -4,7 +4,7 @@
 # Usage: collect_pr_context.sh [options] [base-branch]
 #   --out DIR    output directory (default: <repo>/.claude/pr-grill/<branch>)
 #   --no-diff    do not write per-file patches (diff/*.patch)
-#   --stdout     always print the full diff to stdout (default: only when <= 600 lines)
+#   --stdout     always print the full diff to stdout (default: only when <= 300 lines)
 #   --since REF  review-round mode: diff from REF (a commit, or "last" = the HEAD recorded by the
 #                previous run) instead of from the merge-base. Use after pushing fixes for a review.
 #   --pr N       with gh installed: list PR #N's review threads and whether the diff touches each one
@@ -168,7 +168,38 @@ if [ "$WT_COUNT" -gt 1 ]; then
   git worktree list | grep -v "^$ROOT " | sed 's/^/  other: /' | tee -a "$SUMMARY"
 fi
 [ -n "$EXCL_WARN" ] && out "$EXCL_WARN"
+# Past battles in this repo: lenses the author stumbled on recently come first in the Q&A
+STATS_SH="$(dirname "$0")/pr_grill_stats.sh"
+if [ -x "$STATS_SH" ] && [ -f "$ROOT/.claude/pr-grill/stats.log" ]; then
+  WEAK=$(PR_GRILL_STATS_DIR="$ROOT/.claude/pr-grill" "$STATS_SH" weak | tr '\n' ';' | sed 's/;$//; s/;/; /g')
+  out "Past PRs in this repo: $(grep -c . "$ROOT/.claude/pr-grill/stats.log")${WEAK:+  weak lenses lately: $WEAK  <- lead the Q&A with these}"
+fi
+DIFF_LINES=$(git diff -M "$MB" -- . "${EXCLUDE[@]}" | wc -l | tr -d ' ')
+N_FILES=$(printf '%s\n' "$CHANGED" | grep -c .)
+if [ "$DIFF_LINES" -le 300 ]; then PLAN="inline (printed at the end of this summary)"; else PLAN="per-file patches under diff/ — read essential changes first"; fi
+out "Reading plan: $N_FILES files, $DIFF_LINES diff lines → $PLAN"
 out "Output: $OUT"
+
+# Who the author is, inferred from git so the skill does not have to ask:
+#   wrote  = self | ai | inherited   (branch commits by others, or AI co-author trailers)
+#   knows  = new | some | owner      (past commits by the current user on the changed files)
+ME=$(git config user.email 2>/dev/null || true)
+BR_MINE=0; BR_OTHERS=0; BR_AI=0; PAST=0
+if [ -n "$ME" ]; then
+  BR_MINE=$(git log --format=%ae "$FULL_MB"..HEAD | grep -cxF "$ME")
+  BR_OTHERS=$(git log --format=%ae "$FULL_MB"..HEAD | grep -cvxF "$ME")
+  BR_AI=$(git log --format=%B "$FULL_MB"..HEAD | grep -ciE '^co-authored-by:.*(claude|copilot|cursor|codex|gpt|gemini|devin|aider)')
+  # shellcheck disable=SC2086  # CHANGED is a newline-separated list of paths without spaces in practice
+  [ -n "$CHANGED" ] && PAST=$(printf '%s\n' "$CHANGED" | xargs git log -n 500 --format=%ae "$FULL_MB" -- 2>/dev/null | grep -cxF "$ME")
+fi
+if [ "$BR_OTHERS" -gt "$BR_MINE" ]; then WROTE="inherited ($BR_OTHERS of $((BR_MINE + BR_OTHERS)) branch commits by others)"
+elif [ "$BR_AI" -gt 0 ]; then WROTE="ai ($BR_AI commit(s) carry an AI co-author trailer)"
+else WROTE="self"; fi
+if [ "$PAST" -ge 5 ]; then KNOWS="owner ($PAST past commits by you on these files)"
+elif [ "$PAST" -ge 1 ]; then KNOWS="some ($PAST past commit(s) by you on these files)"
+else KNOWS="new (no past commits by you on these files)"; fi
+section "Author profile (inferred from git; the author can correct it in one line)"
+out "wrote=$WROTE" "knows=$KNOWS"
 
 section "Uncommitted changes (git status)"
 git status --short | pipe "(none)"
@@ -287,6 +318,47 @@ done | pipe "(none)"
 [ "$IDS_TOTAL" -gt 25 ] && out "… $((IDS_TOTAL - 25)) more identifiers omitted ($OUT/identifiers.txt)"
 
 # ---- repository conventions and checks ---------------------------------------------
+# ---- hunk index with links (for the Change notes) -------------------------------
+# GitHub "Files changed" anchors are #diff-<sha256 of the path>R<new-side line>; blob permalinks need only HEAD.
+sha256_hex() { if command -v sha256sum >/dev/null 2>&1; then sha256sum | cut -c1-64; else shasum -a 256 | cut -c1-64; fi; }
+REMOTE=$(git remote get-url origin 2>/dev/null || true)
+GH_REPO=""
+case "$REMOTE" in
+  git@github.com:*)   GH_REPO="${REMOTE#git@github.com:}" ;;
+  https://github.com/*) GH_REPO="${REMOTE#https://github.com/}" ;;
+  ssh://git@github.com/*) GH_REPO="${REMOTE#ssh://git@github.com/}" ;;
+esac
+GH_REPO="${GH_REPO%.git}"; GH_REPO="${GH_REPO%/}"
+HEAD_SHA=$(git rev-parse HEAD)
+section "Hunks (new-side lines; pick the ones that matter for the Change notes, up to the budget below)"
+if [ -n "$GH_REPO" ]; then
+  out "Link base: https://github.com/$GH_REPO  (PR anchors need --pr N; blob permalinks use HEAD ${HEAD_SHA:0:8})"
+else
+  out "(origin is not on github.com: no links, path:line only)"
+fi
+git diff -M -U0 "$MB" -- . "${EXCLUDE[@]}" | awk '
+  /^\+\+\+ / { f = $0; sub(/^\+\+\+ b\//, "", f); next }
+  /^@@/ { m = $0; sub(/^@@ -[0-9]*(,[0-9]*)? \+/, "", m); sub(/ .*/, "", m); split(m, p, ","); n = p[1] + 0; c = (p[2] == "") ? 1 : p[2] + 0
+          if (c == 0) print f "\t" n "\t" n "\tdeleted"; else print f "\t" n "\t" (n + c - 1) "\tchanged" }
+' > "$OUT/hunks.tsv"
+HUNK_TOTAL=$(wc -l < "$OUT/hunks.tsv" | tr -d ' ')
+# How many Change-notes lines the PR deserves: proportional to the number of changed files, bounded
+BUDGET=$(( (N_FILES + 2) / 3 )); [ "$BUDGET" -lt 3 ] && BUDGET=3; [ "$BUDGET" -gt 10 ] && BUDGET=10
+[ "$HUNK_TOTAL" -lt "$BUDGET" ] && BUDGET="$HUNK_TOTAL"
+out "Change notes budget: $BUDGET (1 per 3 changed files, min 3, max 10) of $HUNK_TOTAL hunks"
+head -60 "$OUT/hunks.tsv" | while IFS="$(printf '\t')" read -r hf hs he hk; do
+  [ -z "$hf" ] && continue
+  if [ "$hs" = "$he" ]; then range="$hs"; lr="L$hs"; else range="$hs-$he"; lr="L$hs-L$he"; fi
+  line="- $hf:$range ($hk)"
+  if [ -n "$GH_REPO" ]; then
+    anchor=$(printf '%s' "$hf" | sha256_hex)
+    line="$line  blob: https://github.com/$GH_REPO/blob/$HEAD_SHA/$hf#$lr"
+    [ -n "$PR" ] && line="$line  pr: https://github.com/$GH_REPO/pull/$PR/files#diff-${anchor}R$hs"
+  fi
+  echo "$line"
+done | pipe "(no hunks)"
+[ "$HUNK_TOTAL" -gt 60 ] && out "… $((HUNK_TOTAL - 60)) more hunks in $OUT/hunks.tsv"
+
 # ---- review threads vs. the diff (--pr) ---------------------------------------
 if [ -n "$PR" ]; then
   section "Review threads on PR #$PR vs. this diff (thread roots only; 'touched' = the diff edits within 3 lines of the comment)"
@@ -348,7 +420,7 @@ fi
 out "Full diff: $OUT/full.diff"
 # Remember this run so the next one can offer --since last
 printf 'last_head=%s\nlast_run=%s\nbase=%s\n' "$(git rev-parse HEAD)" "$(date '+%Y-%m-%d %H:%M')" "$BASE" > "$OUT/state"
-if [ "$FORCE_STDOUT" = 1 ] || [ "$DIFF_LINES" -le 600 ]; then
+if [ "$FORCE_STDOUT" = 1 ] || [ "$DIFF_LINES" -le 300 ]; then
   out "" '```diff'; cat "$OUT/full.diff" | tee -a "$SUMMARY"; out '```'
 else
   out "" "(${DIFF_LINES} lines is too large for stdout. Read the per-file patches above, essential changes first.)"

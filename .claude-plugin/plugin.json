@@ -1,0 +1,14 @@
+{
+  "name": "pr-grill",
+  "displayName": "pr-grill",
+  "version": "0.2.0",
+  "description": "For PR authors: understand your own change well enough to defend it. Labels what the code proves vs. what only you know, grills you one question at a time, and tracks your readiness across PRs.",
+  "author": {
+    "name": "kenmori",
+    "url": "https://github.com/kenmori"
+  },
+  "homepage": "https://github.com/kenmori/pr-grill",
+  "repository": "https://github.com/kenmori/pr-grill",
+  "license": "MIT",
+  "keywords": ["pull-request", "code-review", "self-review", "skill", "git"]
+}
