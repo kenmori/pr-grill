@@ -385,7 +385,7 @@
           ]
         },
         {
-          "in": "lib.ts と直接の呼び出し元だけ。CLI は v3 まで oldName のまま。"
+          "in": "lib.ts とこのリポジトリの呼び出し元すべて。cli/main.ts は見落とし。PR を出す前に直す。"
         },
         {
           "out": [
@@ -407,6 +407,18 @@
               [
                 "src/lib.ts:1",
                 "head"
+              ]
+            ],
+            [
+              [
+                "      -export function oldName(a) {",
+                "warn"
+              ]
+            ],
+            [
+              [
+                "      +export function newName(a) {",
+                "ok"
               ]
             ],
             [

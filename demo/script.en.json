@@ -385,7 +385,7 @@
           ]
         },
         {
-          "in": "Only lib.ts and its direct callers. The CLI keeps oldName until v3."
+          "in": "lib.ts and every caller in this repo. cli/main.ts was missed; adding it before I open the PR."
         },
         {
           "out": [
@@ -407,6 +407,18 @@
               [
                 "src/lib.ts:1",
                 "head"
+              ]
+            ],
+            [
+              [
+                "      -export function oldName(a) {",
+                "warn"
+              ]
+            ],
+            [
+              [
+                "      +export function newName(a) {",
+                "ok"
               ]
             ],
             [
