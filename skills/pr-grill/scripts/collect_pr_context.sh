@@ -105,6 +105,7 @@ if [ -n "$SINCE" ]; then
   MB="$SINCE_SHA"
 fi
 mkdir -p "$OUT" || { echo "ERROR: cannot create the output directory $OUT (use --out DIR to pick another)" >&2; exit 1; }
+OUT=$(cd "$OUT" && pwd -P)   # resolve symlinks so comparisons with $ROOT hold (macOS: /var -> /private/var)
 # Only remove what a previous run wrote (never rm -rf a user-supplied --out path)
 rm -f "$OUT"/diff/*.patch 2>/dev/null; rmdir "$OUT/diff" 2>/dev/null
 [ "$WRITE_DIFF" = 1 ] && mkdir -p "$OUT/diff"
