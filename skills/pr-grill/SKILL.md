@@ -1,6 +1,6 @@
 ---
 name: pr-grill
-description: Prepares the author of a pull request to explain and defend their own change, before opening the PR and while responding to review. Summarizes the diff, traces the blast radius, predicts reviewer questions by lens, separates what the code proves from what only the author knows, interviews the author one question at a time along a decision tree (Grill), runs an oral exam (Drill), drafts evidence-based replies to review comments (Reply), checks accountability for AI-generated hunks, and detects contradictions between the PR description and the diff. Use it, even when not asked explicitly, whenever the author says things like "I want to understand my change", "help me understand this diff", "check this before I open the PR", "what will reviewers ask?", "I want to be able to explain this change", "self-review", "PR prep", "grill my PR", "dig into my intent", or points at their own branch, diff or PR number and asks to understand or prepare to explain it. Do not use it when the user is reviewing someone else's PR.
+description: Prepares the author of a pull request to explain and defend their own change, before opening the PR and while responding to review. Summarizes the diff, traces the blast radius, predicts reviewer questions by lens, separates what the code proves from what only the author knows, interviews the author one question at a time along a decision tree (Grill), runs an oral exam (Drill), drafts evidence-based replies to review comments (Reply), makes the author able to explain the fixes they pushed after a review and drafts the re-review summary (Revise), checks accountability for AI-generated hunks, and detects contradictions between the PR description and the diff. Use it, even when not asked explicitly, whenever the author says things like "I want to understand my change", "help me understand this diff", "check this before I open the PR", "what will reviewers ask?", "I want to be able to explain this change", "self-review", "PR prep", "grill my PR", "dig into my intent", "I pushed the fixes for the review", "ready for re-review?", or points at their own branch, diff or PR number and asks to understand or prepare to explain it. Do not use it when the user is reviewing someone else's PR.
 ---
 
 # pr-grill — make the change explainable
@@ -35,6 +35,7 @@ Choose from what the user said. If unclear, run Brief and offer the other modes 
 | Grill (surface intent) | "grill me", "dig into the intent" | Read `references/grill-mode.md`. Resolve `[ask author]` items one per turn, in decision-tree order. |
 | Drill (oral exam) | "quiz me", "test my understanding" | Read `references/drill-mode.md`. |
 | Reply (review responses) | review comments pasted / a review landed on the PR | Read `references/reply-mode.md`. |
+| Revise (after pushing fixes) | "I pushed the fixes", "I addressed the review", "ready for re-review?" | Read `references/revise-mode.md`. Only the delta since the review; two questions per fix; re-review summary. |
 
 If the user says they need to explain it out loud ("in the meeting", "to my lead"), add a 3-minute script next to Brief's 30-second summary. Nothing more.
 
@@ -55,6 +56,8 @@ If the collector fails or its output looks wrong, **show the user the error text
 - If the summary lists review conventions or a PR template, read them. The Q&A must follow that repository's customs.
 
 When `gh` is available, also run `gh pr view --json title,body,reviewRequests,reviews` for the PR description and reviewers. Continue without it otherwise.
+
+The collector records the HEAD it ran on in `.claude/pr-grill/<branch>/state`. When a later run says "Previous run was at …; N commit(s) since", the author may be in a review round: offer Revise instead of re-running Brief on the whole PR.
 
 ### Step 2: Change Map
 Keep it tight; no paraphrasing for its own sake.

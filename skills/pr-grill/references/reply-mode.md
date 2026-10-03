@@ -32,3 +32,4 @@ Before drafting, sort each comment into one of these and show the author:
 - Posting and resolving threads is the author's job. Claude only drafts.
 - Do not downplay a valid finding. Where the reviewer is right, the reply says so.
 - After a fix lands, refresh the Step 3 Q&A: fixes create new questions.
+- Once the author has pushed the fixes, switch to Revise (`references/revise-mode.md`): it checks that the author can explain each fix and drafts the re-review summary.

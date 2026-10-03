@@ -5,21 +5,28 @@
 #   --out DIR    output directory (default: <repo>/.claude/pr-grill/<branch>)
 #   --no-diff    do not write per-file patches (diff/*.patch)
 #   --stdout     always print the full diff to stdout (default: only when <= 600 lines)
+#   --since REF  review-round mode: diff from REF (a commit, or "last" = the HEAD recorded by the
+#                previous run) instead of from the merge-base. Use after pushing fixes for a review.
+#   --pr N       with gh installed: list PR #N's review threads and whether the diff touches each one
 #   -h, --help   this help
 #
 # Base branch defaults to origin/HEAD -> origin/main -> main -> origin/master -> master -> develop.
 # Output: the summary on stdout, plus <out>/summary.md, <out>/full.diff, <out>/diff/<path>.patch
 set -uo pipefail
 
-usage() { sed -n '2,11p' "$0" | sed 's/^# \{0,1\}//'; }
+usage() { sed -n '2,14p' "$0" | sed 's/^# \{0,1\}//'; }
 
-OUT=""; WRITE_DIFF=1; FORCE_STDOUT=0; BASE=""
+OUT=""; WRITE_DIFF=1; FORCE_STDOUT=0; BASE=""; SINCE=""; PR=""
 while [ $# -gt 0 ]; do
   case "$1" in
     --out) OUT="${2:-}"; shift 2 ;;
     --out=*) OUT="${1#--out=}"; shift ;;
     --no-diff) WRITE_DIFF=0; shift ;;
     --stdout) FORCE_STDOUT=1; shift ;;
+    --since) SINCE="${2:-}"; shift 2 ;;
+    --since=*) SINCE="${1#--since=}"; shift ;;
+    --pr) PR="${2:-}"; shift 2 ;;
+    --pr=*) PR="${1#--pr=}"; shift ;;
     -h|--help) usage; exit 0 ;;
     -*) echo "ERROR: unknown option: $1" >&2; usage >&2; exit 2 ;;
     *) BASE="$1"; shift ;;
@@ -67,6 +74,31 @@ HEAD_NAME=$(git rev-parse --abbrev-ref HEAD)
 # ---- output directory -----------------------------------------------------
 SLUG=$(printf '%s' "$HEAD_NAME" | sed 's#/#__#g')
 [ -z "$OUT" ] && OUT="$ROOT/.claude/pr-grill/$SLUG"
+
+# ---- review-round mode (--since) ------------------------------------------------
+# The diff base becomes the reviewed commit, so every section below describes only what changed
+# in response to the review. The merge-base stays in FULL_MB for the header.
+FULL_MB="$MB"; SINCE_SHA=""
+if [ -n "$SINCE" ]; then
+  if [ "$SINCE" = last ]; then
+    STATE_FILE="$OUT/state"
+    if [ ! -f "$STATE_FILE" ]; then
+      echo "ERROR: --since last needs a previous run, but $STATE_FILE does not exist." >&2
+      echo "       Run once without --since first, or pass the reviewed commit: --since <sha>" >&2
+      exit 1
+    fi
+    SINCE=$(sed -n 's/^last_head=//p' "$STATE_FILE")
+  fi
+  if ! SINCE_SHA=$(git rev-parse --verify --quiet "$SINCE^{commit}"); then
+    echo "ERROR: --since $SINCE is not a commit in this repository." >&2; exit 1
+  fi
+  if ! git merge-base --is-ancestor "$SINCE_SHA" HEAD; then
+    echo "ERROR: --since ${SINCE_SHA:0:8} is not an ancestor of HEAD, so 'what changed since then' has no meaning." >&2
+    echo "       If the branch was rebased or amended after the review, pass the pre-rebase commit from the PR's timeline." >&2
+    exit 1
+  fi
+  MB="$SINCE_SHA"
+fi
 mkdir -p "$OUT" || { echo "ERROR: cannot create the output directory $OUT (use --out DIR to pick another)" >&2; exit 1; }
 # Only remove what a previous run wrote (never rm -rf a user-supplied --out path)
 rm -f "$OUT"/diff/*.patch 2>/dev/null; rmdir "$OUT/diff" 2>/dev/null
@@ -107,7 +139,20 @@ CHANGED=$(git diff -M --name-only "$MB" -- . "${EXCLUDE[@]}")
 CHANGED_FILE="$OUT/changed_files.txt"; printf '%s\n' "$CHANGED" > "$CHANGED_FILE"
 
 # ---- header -------------------------------------------------------------
-out "## BASE: $BASE  HEAD: $HEAD_NAME  merge-base: ${MB:0:8}"
+if [ -n "$SINCE_SHA" ]; then
+  out "## REVIEW ROUND: changes since ${SINCE_SHA:0:8} ($(git log -1 --format='%s, %cd' --date=short "$SINCE_SHA"))" \
+      "BASE: $BASE  HEAD: $HEAD_NAME  merge-base: ${FULL_MB:0:8}  (every section below covers only the delta since ${SINCE_SHA:0:8})"
+  [ "$SINCE_SHA" = "$(git rev-parse HEAD)" ] && out "⚠ HEAD is the reviewed commit itself: nothing has been committed since. Only uncommitted changes are shown."
+else
+  out "## BASE: $BASE  HEAD: $HEAD_NAME  merge-base: ${MB:0:8}"
+fi
+if [ -z "$SINCE_SHA" ] && [ -f "$OUT/state" ]; then
+  PREV=$(sed -n 's/^last_head=//p' "$OUT/state")
+  if [ -n "$PREV" ] && git rev-parse --verify --quiet "$PREV^{commit}" >/dev/null && [ "$PREV" != "$(git rev-parse HEAD)" ]; then
+    N_SINCE=$(git rev-list --count "$PREV"..HEAD 2>/dev/null || echo "?")
+    out "Previous run was at ${PREV:0:8} ($(sed -n 's/^last_run=//p' "$OUT/state")); $N_SINCE commit(s) since. For a review-round delta: --since last"
+  fi
+fi
 BASE_TS=$(git log -1 --format=%ct "$BASE"); NOW_TS=$(date +%s)
 BASE_AGE=$(( (NOW_TS - BASE_TS) / 86400 ))
 out "Latest commit on base: $(git log -1 --format='%h %cd' --date=short "$BASE") (${BASE_AGE} days ago)"
@@ -135,7 +180,7 @@ section "Commits"
 git log --no-merges --format='- %h %s (%an, %ad)' --date=short "$MB"..HEAD | pipe "(no commits since base; uncommitted changes only)"
 
 section "Changed files (stat)"
-git diff -M --stat=120 "$MB" -- . "${EXCLUDE[@]}" | pipe "(nothing changed since $BASE after exclusions: no commits on top of it and no edits in the working tree)"
+git diff -M --stat=120 "$MB" -- . "${EXCLUDE[@]}" | pipe "(nothing changed since ${SINCE_SHA:+${SINCE_SHA:0:8}}${SINCE_SHA:-$BASE} after exclusions: no new commits and no edits in the working tree)"
 section "Added / deleted / renamed / mode changes"
 git diff -M --summary "$MB" -- . "${EXCLUDE[@]}" | pipe "(none)"
 
@@ -242,6 +287,35 @@ done | pipe "(none)"
 [ "$IDS_TOTAL" -gt 25 ] && out "… $((IDS_TOTAL - 25)) more identifiers omitted ($OUT/identifiers.txt)"
 
 # ---- repository conventions and checks ---------------------------------------------
+# ---- review threads vs. the diff (--pr) ---------------------------------------
+if [ -n "$PR" ]; then
+  section "Review threads on PR #$PR vs. this diff (thread roots only; 'touched' = the diff edits within 3 lines of the comment)"
+  if ! command -v gh >/dev/null 2>&1; then
+    out "(gh is not installed, so the threads could not be fetched. Paste the review comments instead.)"
+  elif ! THREADS=$(gh api "repos/{owner}/{repo}/pulls/$PR/comments" --paginate \
+        --jq '.[] | select(.in_reply_to_id == null) | [.id, .path, (.line // .original_line // 0), .user.login, (.body | gsub("[\n\r\t]+"; " ") | .[0:140])] | @tsv' 2>&1); then
+    out "(gh api failed: $(printf '%s' "$THREADS" | head -3 | tr '\n' ' '))" \
+        "(Common causes: not logged in -> gh auth login; wrong PR number; no network. Paste the comments instead.)"
+  elif [ -z "$THREADS" ]; then
+    out "(no review comments on PR #$PR)"
+  else
+    printf '%s\n' "$THREADS" | while IFS="$(printf '\t')" read -r cid cpath cline cauthor cbody; do
+      [ -z "$cid" ] && continue
+      status="file untouched"
+      if printf '%s\n' "$CHANGED" | grep -qxF "$cpath"; then
+        status="file touched, not at this line"
+        # Old-side hunk ranges in the delta: the reviewed commit's line numbers, which is what the comment refers to
+        git diff -M -U0 "$MB" -- "$cpath" | sed -nE 's/^@@ -([0-9]+)(,([0-9]+))? .*/\1 \3/p' | while read -r hs hc; do
+          hc=${hc:-1}; [ "$hc" -eq 0 ] && hc=1; he=$((hs + hc - 1))
+          if [ "$cline" -ge $((hs - 3)) ] && [ "$cline" -le $((he + 3)) ]; then echo touched; fi
+        done | grep -q touched && status="touched"
+      fi
+      echo "- #$cid $cpath:$cline (@$cauthor) → $status"
+      echo "  \"$cbody\""
+    done | pipe "(none)"
+  fi
+fi
+
 section "Review conventions and templates in this repo (read them if present)"
 for f in .github/PULL_REQUEST_TEMPLATE.md .github/pull_request_template.md PULL_REQUEST_TEMPLATE.md docs/PULL_REQUEST_TEMPLATE.md \
          CONTRIBUTING.md .github/CONTRIBUTING.md CLAUDE.md REVIEW.md .github/REVIEW.md AGENTS.md; do
@@ -272,6 +346,8 @@ if [ "$WRITE_DIFF" = 1 ]; then
   done | pipe
 fi
 out "Full diff: $OUT/full.diff"
+# Remember this run so the next one can offer --since last
+printf 'last_head=%s\nlast_run=%s\nbase=%s\n' "$(git rev-parse HEAD)" "$(date '+%Y-%m-%d %H:%M')" "$BASE" > "$OUT/state"
 if [ "$FORCE_STDOUT" = 1 ] || [ "$DIFF_LINES" -le 600 ]; then
   out "" '```diff'; cat "$OUT/full.diff" | tee -a "$SUMMARY"; out '```'
 else

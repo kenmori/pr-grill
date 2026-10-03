@@ -126,6 +126,40 @@ echo "# unknown base lists local branches"
 bash "$SCRIPT" no-such-branch > /dev/null 2>"$TMP/nobase.err"
 yes "names the local branches"                     grep -q 'Local branches:.*feature/rename' "$TMP/nobase.err"
 
+echo "# review-round mode: state, --since, --pr"
+bash "$SCRIPT" main > /dev/null 2>&1
+STATE="$OUTDIR/state"
+yes "state records the current HEAD"      grep -q "^last_head=$(git rev-parse HEAD)$" "$STATE"
+printf 'export function newName(a) {\n  return a + 1\n}\n' > src/lib.ts
+git commit -qam "fix after review"
+bash "$SCRIPT" main > "$TMP/after.txt" 2>&1
+yes "default run mentions the previous run"  grep -q 'Previous run was at .* 1 commit(s) since' "$TMP/after.txt"
+# fake gh: two thread roots, one on the fixed line, one on an untouched file
+mkdir -p "$TMP/bin"
+cat > "$TMP/bin/gh" <<'FAKE'
+#!/usr/bin/env bash
+printf '101\tsrc/lib.ts\t2\treviewer\tReturn a + 1 here\n102\tsrc/caller.ts\t1\treviewer\tRename the import\n'
+FAKE
+chmod +x "$TMP/bin/gh"
+PATH="$TMP/bin:$PATH" bash "$SCRIPT" --since "$(git rev-parse HEAD~1)" --pr 9 main > "$TMP/round.txt" 2>&1
+OUT="$TMP/round.txt"
+yes "--since prints the review-round header"       grep -q '^## REVIEW ROUND: changes since' "$OUT"
+yes "--since limits the stat to the fix"           in_section "Changed files (stat)" 'src/lib\.ts'
+no  "--since leaves earlier files out"             in_section "Changed files (stat)" 'src/clock\.ts'
+yes "thread on the fixed line is touched"          in_section "Review threads" '^- #101 src/lib\.ts:2 .* → touched$'
+yes "thread on an untouched file says so"          in_section "Review threads" '^- #102 src/caller\.ts:1 .* → file untouched$'
+PATH="$TMP/bin:$PATH" bash "$SCRIPT" --since last main > "$TMP/last.txt" 2>&1
+yes "--since last uses the recorded HEAD"          grep -q 'HEAD is the reviewed commit itself' "$TMP/last.txt"
+bash "$SCRIPT" --since deadbeef main > /dev/null 2>"$TMP/since.err"
+yes "--since with an unknown commit fails clearly" grep -q 'is not a commit in this repository' "$TMP/since.err"
+git checkout -q main && printf 'x\n' > elsewhere.txt && git add elsewhere.txt && git commit -qm "on main" && git checkout -q feature/rename
+bash "$SCRIPT" --since main main > /dev/null 2>"$TMP/anc.err"
+yes "--since with a non-ancestor explains rebase"  grep -q 'not an ancestor of HEAD' "$TMP/anc.err"
+rm -f "$OUTDIR/state"
+bash "$SCRIPT" --since last main > /dev/null 2>"$TMP/nostate.err"
+yes "--since last without a state file explains"   grep -q 'needs a previous run' "$TMP/nostate.err"
+OUT="$OUTDIR/summary.md"
+
 echo "# with a test change"
 printf 'test("y", () => {})\n' >> tests/lib.test.ts
 bash "$SCRIPT" main > /dev/null 2>&1
