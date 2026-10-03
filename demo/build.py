@@ -25,6 +25,7 @@ COLORS = {
 }
 TYPE_S = 1 / 22      # seconds per typed character
 OUT_S = 0.35         # seconds per output line
+STEP_S = 0.9         # seconds per progress line (lines starting with "Step ")
 PAUSE_IN = 0.5       # after the user hits enter
 PAUSE_SCENE = 2.4    # hold at the end of a scene
 PAUSE_CARD = 4.0
@@ -57,7 +58,7 @@ def layout(script):
                     for segs in ev["out"]:
                         rows.append((t, li, segs))
                         li += 1
-                        t += OUT_S
+                        t += STEP_S if segs and segs[0][0].startswith("Step ") else OUT_S
             t += PAUSE_SCENE
         end = t
         for row in rows:

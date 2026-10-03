@@ -76,6 +76,22 @@ is how on-call misread the log in INC-212 (author). Renamed to `newName`; the si
 must follow — it does not yet.
 ```
 
+### A question carries its evidence
+The author should never have to open a file to understand what is being asked. Every question block has three parts, in this order (plus the `Suggested:` line on the nodes that allow one, after the question):
+1. **The hunk** (≤ 12 lines) when the node is about a change.
+2. **One or two lines of context the answer needs**, chosen by the kind of question:
+   - what the code does / what a reader believes → `called by: src/caller.ts:1 (still imports oldName)`
+   - scope, "which callers" → the caller list from the collector, `← outside diff` marked
+   - why X and not Y → a two-line comparison, one line per option, stating what each changes for callers:
+     ```
+     rename:  oldName gone      → every caller changes now
+     alias:   oldName stays     → callers migrate later; two names meanwhile
+     ```
+   - edge case → the input and the line that handles (or fails to handle) it
+   - release / detection → the log line or metric that exists today, or "none found"
+3. **The question**, one sentence, under ~90 characters so it is not cut off in a terminal.
+Lines longer than ~90 characters are wrapped; a question the author has to scroll sideways to read is a bad question.
+
 ### Shared rules
 - One question per turn. Never batch (it confuses the author and yields shallow answers).
 - Before asking, exhaust what the environment can tell you. Use what you found as evidence in the question or the suggestion.

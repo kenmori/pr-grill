@@ -5,22 +5,6 @@
       "events": [
         {
           "in": "PR出す前に自分の変更を理解したい"
-        },
-        {
-          "out": [
-            [
-              [
-                "Step 1/5 収集 · 2/5 変更の地図 · 3/5 想定問答 · 4/5 チェック · 5/5 PR_QA.md",
-                "dim"
-              ]
-            ],
-            [
-              [
-                "scripts/collect_pr_context.sh main を実行中…",
-                "dim"
-              ]
-            ]
-          ]
         }
       ]
     },
@@ -30,95 +14,115 @@
           "out": [
             [
               [
-                "## BASE: main  HEAD: feature/rename  merge-base: 89acda59",
-                "head"
+                "Step 1/5 収集         ",
+                "dim"
+              ],
+              [
+                "✔",
+                "ok"
+              ],
+              [
+                "  4 ファイル、差分 61 行",
+                ""
+              ]
+            ]
+          ]
+        },
+        {
+          "out": [
+            [
+              [
+                "╔═══ pr-grill ═══════════════════════════════════════╗",
+                "meter"
               ]
             ],
             [
               [
-                "Reading plan: 4 files, 61 diff lines → inline",
+                "║  feature/rename            wrote=ai · knows=some   ║",
+                "meter"
+              ]
+            ],
+            [
+              [
+                "║  Readiness ░░░░░░░░░░  0%      last PR: 85%        ║",
+                "meter"
+              ]
+            ],
+            [
+              [
+                "║  Regular ★ · 3 PR(s) on record · weak lately: ops  ║",
+                "meter"
+              ]
+            ],
+            [
+              [
+                "╚════════════════════════════════════════════════════╝",
+                "meter"
+              ]
+            ]
+          ]
+        },
+        {
+          "out": [
+            [
+              [
+                "AI併用・この領域に過去2コミット、として進めます。違えば一言ください。",
                 "dim"
               ]
             ],
             [
               [
-                "## Author profile (inferred from git)",
-                "head"
-              ]
-            ],
-            [
-              [
-                "wrote=ai (2 commits carry an AI co-author trailer)   knows=some (2 past commits by you)",
-                ""
-              ]
-            ],
-            [
-              [
-                "## Untracked files (⚠ NOT included in the diff below)",
-                "head"
-              ]
-            ],
-            [
-              [
-                "src/brand_new.ts",
-                ""
-              ]
-            ],
-            [
-              [
-                "## Secret-shaped values (⚠ check these first; masked here, NOT in full.diff)",
-                "head"
-              ]
-            ],
-            [
-              [
-                "src/clock.ts:3: const apiKey = \"sk-a…[masked]\"",
-                "warn"
-              ]
-            ],
-            [
-              [
-                "## Caller candidates (defining file excluded)",
-                "head"
-              ]
-            ],
-            [
-              [
-                "### oldName (defined in src/lib.ts)",
-                ""
-              ]
-            ],
-            [
-              [
-                "src/caller.ts:1: import { oldName } from \"./lib\"",
-                ""
+                "Step 2/5 変更の地図   ",
+                "dim"
               ],
               [
-                "   <- outside diff (possibly not updated)",
+                "✔",
+                "ok"
+              ],
+              [
+                "  本質 2 · 付随 1 · 意図不明 1",
+                ""
+              ]
+            ],
+            [
+              [
+                "Step 3/5 想定問答     ",
+                "dim"
+              ],
+              [
+                "✔",
+                "ok"
+              ],
+              [
+                "  あなたにしか答えられない質問 7",
+                ""
+              ]
+            ],
+            [
+              [
+                "Step 4/5 チェック     ",
+                "dim"
+              ],
+              [
+                "✔",
+                "ok"
+              ],
+              [
+                "  秘密情報らしき値 1 · 差分外の呼び出し元 1 · テスト変更なし",
                 "warn"
               ]
             ],
             [
               [
-                "## Test file changes",
-                "head"
-              ]
-            ],
-            [
+                "Step 5/5 PR_QA.md     ",
+                "dim"
+              ],
               [
-                "(no test changes <- expect a question about this)",
-                "warn"
-              ]
-            ],
-            [
+                "✔",
+                "ok"
+              ],
               [
-                "## Checks reviewers will ask whether you ran",
-                "head"
-              ]
-            ],
-            [
-              [
-                "- npm run test   - npm run lint   - CI: .github/workflows/ci.yml",
+                "  書き出し → .pr-grill/feature__rename/PR_QA.md",
                 ""
               ]
             ]
@@ -134,12 +138,6 @@
               [
                 "# PR QA: feature/rename",
                 "head"
-              ]
-            ],
-            [
-              [
-                "AI併用・この領域に過去2コミット、として進めます。違えば一言ください。",
-                "dim"
               ]
             ],
             [
@@ -228,7 +226,21 @@
             ],
             [
               [
-                "      この関数は実際に何をしていて、oldName という名前は読み手に何を誤解させましたか?",
+                "      called by: ",
+                "dim"
+              ],
+              [
+                "src/caller.ts:1",
+                "head"
+              ],
+              [
+                "  (まだ oldName を import)",
+                "dim"
+              ]
+            ],
+            [
+              [
+                "      この関数は何をしていて、oldName は読み手に何を期待させましたか?",
                 "q"
               ]
             ]
@@ -251,16 +263,44 @@
               [
                 "src/lib.ts:1 (1-3)",
                 "head"
+              ]
+            ],
+            [
+              [
+                "      -export function oldName(a) {",
+                "warn"
+              ]
+            ],
+            [
+              [
+                "      +export function newName(a) {",
+                "ok"
+              ]
+            ],
+            [
+              [
+                "      called by: ",
+                "dim"
               ],
               [
-                "   この関数は実際に何をしていて、oldName という名前は読み手に何を誤解させましたか?",
+                "src/caller.ts:1",
+                "head"
+              ],
+              [
+                "  (まだ oldName を import)",
+                "dim"
+              ]
+            ],
+            [
+              [
+                "      この関数は何をしていて、oldName は読み手に何を期待させましたか?",
                 "q"
               ]
             ]
           ]
         },
         {
-          "in": "引数をそのまま返すだけ。でも oldName は変換に見えて、先週 on-call がログを読み違えた(INC-212)。"
+          "in": "引数をそのまま返すだけ。oldName は変換に見えて、on-call が読み違えた(INC-212)。"
         },
         {
           "out": [
@@ -270,7 +310,13 @@
                 "ok"
               ],
               [
-                "  具体的: ○(INC-212) · コードと整合: ○ · 不足: 新しい名前に依存する呼び出し元",
+                "  具体的: ○ (INC-212) · コードと整合: ○",
+                "dim"
+              ]
+            ],
+            [
+              [
+                "   不足: 新しい名前に依存する呼び出し元",
                 "dim"
               ]
             ],
@@ -286,10 +332,18 @@
                 "meter"
               ],
               [
-                "  解答例を PR_QA.md に記録",
+                "   解答例 → PR_QA.md",
                 "dim"
               ]
-            ],
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "events": [
+        {
+          "out": [
             [
               [
                 "Q2/7  ",
@@ -298,16 +352,40 @@
               [
                 "src/lib.ts:1",
                 "head"
+              ]
+            ],
+            [
+              [
+                "      callers: ",
+                "dim"
               ],
               [
-                "   ここでの完了とは? スコープ外にした呼び出し元は?",
+                "src/caller.ts:1",
+                "head"
+              ],
+              [
+                "  ·  ",
+                "dim"
+              ],
+              [
+                "cli/main.ts:40",
+                "head"
+              ],
+              [
+                "  ← 差分外",
+                "warn"
+              ]
+            ],
+            [
+              [
+                "      ここでの「完了」は? どの呼び出し元を当面 oldName のままにしますか?",
                 "q"
               ]
             ]
           ]
         },
         {
-          "in": "lib.ts とその呼び出し元だけ。CLI は v3 まで旧名のまま。"
+          "in": "lib.ts とこのリポジトリの呼び出し元すべて。cli/main.ts は見落とし。PR を出す前に直す。"
         },
         {
           "out": [
@@ -329,9 +407,35 @@
               [
                 "src/lib.ts:1",
                 "head"
-              ],
+              ]
+            ],
+            [
               [
-                "   なぜリネーム? oldName を非推奨の別名として残す案は?",
+                "      -export function oldName(a) {",
+                "warn"
+              ]
+            ],
+            [
+              [
+                "      +export function newName(a) {",
+                "ok"
+              ]
+            ],
+            [
+              [
+                "      リネーム: oldName 消える → 呼び出し元は今すぐ全部変更",
+                "dim"
+              ]
+            ],
+            [
+              [
+                "      別名:     oldName 残る   → あとで移行、当面は名前が2つ",
+                "dim"
+              ]
+            ],
+            [
+              [
+                "      なぜリネーム? oldName を非推奨の別名として残す案は?",
                 "q"
               ]
             ],
@@ -436,7 +540,7 @@
         ],
         [
           [
-            "自分のPRを、レビューで守れるところまで理解する。",
+            "自分の変更を、どんな質問にも根拠付きで答えられるまで理解する。",
             ""
           ]
         ],

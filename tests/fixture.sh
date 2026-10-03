@@ -216,6 +216,7 @@ yes "three records written"                 test "$(grep -c . "$TMP/stats/stats.
 L=$(bash "$STATS" list)
 yes "list shows readiness and drill"        sh -c "printf '%s' '$L' | grep -q 'feat/login.*12 .*85%.*5/8'"
 yes "list shows rounds and level"           sh -c "printf '%s' '$L' | grep -q 'feature/x.*90%.*6/8.*2 .*owner'"
+yes "list shows the rank"                   sh -c "printf '%s' '$L' | grep -q '^Rank: Regular'"
 yes "level defaults to working"             sh -c "printf '%s' '$L' | grep -q 'fix/cache.*working'"
 no  "record rejects a bad --level"          sh -c "bash '$STATS' record --branch b --nodes 1 --code 1 --author 0 --approved 0 --open 0 --level guru 2>/dev/null"
 no  "record rejects counts that exceed nodes" sh -c "bash '$STATS' record --branch b --nodes 3 --code 2 --author 2 --approved 0 --open 0 2>/dev/null"
@@ -225,6 +226,26 @@ yes "weak-lens trend finds ops (3 of 3)"    sh -c "printf '%s' '$L' | grep -q 'o
 no  "a lens hit once is not a trend"        sh -c "printf '%s' '$L' | grep -q 'security ('"
 no  "record rejects a bad --drill"          sh -c "bash '$STATS' record --branch b --nodes 1 --code 1 --author 0 --approved 0 --open 0 --drill 5-2 2>/dev/null"
 no  "record requires --branch"              sh -c "bash '$STATS' record --nodes 1 --code 1 --author 0 --approved 0 --open 0 2>/dev/null"
+BN=$(COLUMNS=100 bash "$STATS" banner --branch feature/next --profile "wrote=ai · knows=some")
+yes "banner: box with the branch and profile"   sh -c "printf '%s' '$BN' | grep -q '║  feature/next.*wrote=ai · knows=some'"
+yes "banner: last readiness from the log"       sh -c "printf '%s' '$BN' | grep -q 'last PR: 90%'"
+yes "banner: weak lens line"                    sh -c "printf '%s' '$BN' | grep -q 'weak lately: ops'"
+yes "banner: rank from the record count"        sh -c "printf '%s' '$BN' | grep -q 'Regular ★ · 3 PR(s)'"
+# display width: count each box/bar glyph as one column (bash substitution is bytewise, like the script's pad)
+box_ok=1
+while IFS= read -r ln; do
+  t=${ln//█/x}; t=${t//░/x}; t=${t//←/x}; t=${t//·/x}; t=${t//═/x}; t=${t//★/x}
+  t=${t//╔/x}; t=${t//╗/x}; t=${t//╚/x}; t=${t//╝/x}; t=${t//║/x}
+  [ "${#t}" -eq 56 ] || box_ok=0
+done <<EOF_BN
+$BN
+EOF_BN
+yes "banner: every box line is 56 columns wide" test "$box_ok" = 1
+yes "banner: 5 lines"                           test "$(printf '%s\n' "$BN" | wc -l | tr -d ' ')" = 5
+BN1=$(COLUMNS=50 bash "$STATS" banner --branch feature/next)
+yes "banner: one line when narrow"              test "$(printf '%s\n' "$BN1" | wc -l | tr -d ' ')" = 1
+yes "banner: narrow line carries the same facts" sh -c "printf '%s' '$BN1' | grep -q 'feature/next.*last 90%.*weak: ops'"
+no  "banner requires --branch"                  sh -c "bash '$STATS' banner 2>/dev/null"
 # the collector surfaces the trend in its header when the log lives in the repo's .pr-grill
 mkdir -p "$REPO/.pr-grill" && cp "$TMP/stats/stats.log" "$REPO/.pr-grill/stats.log"
 unset PR_GRILL_STATS_DIR

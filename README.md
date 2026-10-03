@@ -36,7 +36,7 @@ merge    → one line in your record (readiness %, weak lenses); Drill any time 
 
 ## Any starting level, one finish line
 
-The first turn asks two things: who wrote the change (you / AI under your direction / someone else, you took it over) and how well you know this part of the code. That sets the **path**: a newcomer gets a plain-language walkthrough before any question and hints in Drill; an owner skips the narration, gets no suggested answers in Grill (they anchor like anyone else) and a brutal Drill.
+Nothing is asked up front. The collector infers from git who wrote the change (you / with AI, from co-author trailers / someone else, from the branch's commit authors) and how well you know this part of the code (your past commits on the changed files); Claude states it in one line and you correct it if it is wrong. That sets the **path**: a newcomer gets a plain-language walkthrough before any question and hints in Drill; an owner skips the narration, gets no suggested answers in Grill (they anchor like anyone else) and a brutal Drill.
 
 The **finish line is the same for everyone**, five questions you must answer in your own words before the session counts as done:
 
@@ -47,6 +47,25 @@ The **finish line is the same for everyone**, five questions you must answer in 
 5. How anyone would notice in production that it broke.
 
 If you inherited the branch, "ask the author" becomes "ask the original author": the skill finds them in `git log` and hands you the list of questions to take to them, and only grills you on what you changed since.
+
+## What a session looks like
+
+Brief opens with a start card (branch, inferred profile, last readiness, the lenses you have been stumbling on), then one progress line per step; the collector's raw output never reaches you. Every question carries its evidence: the hunk, the one or two lines of context the answer needs, then a one-sentence question.
+
+```
+╔═══ pr-grill ═══════════════════════════════════════╗
+║  feature/rename            wrote=ai · knows=some   ║
+║  Readiness ░░░░░░░░░░  0%      last PR: 85%        ║
+║  Regular ★ · 3 PR(s) on record · weak lately: ops  ║
+╚════════════════════════════════════════════════════╝
+
+Q3/7  src/lib.ts:1
+      rename:  oldName gone   → every caller changes now
+      alias:   oldName stays  → callers migrate later; two names meanwhile
+      Why rename, rather than keep oldName as a deprecated alias?
+```
+
+After each answer you get a grade (specific? consistent with the code? complete for a reviewer?), what the code shows, and a model answer built only from your words plus `[code]` facts.
 
 ## What you get
 
@@ -143,6 +162,8 @@ Every Grill, Drill or Revise session ends with a line in `.pr-grill/stats.log` (
 ```
 Readiness ████████░░ 85%  (code 4 · author 4 · approved 1 · open 1 of 10)  Drill 5/8  Stumbled: ops, tests
 ```
+
+Every record also moves your rank: Rookie (under 3 PRs) → Regular (3+) → Veteran (6+) → Senior (12+) → Master (25+), with a ★ when your last five average 85% readiness or better. The rank counts battles, not scores, on purpose: showing up is what builds the habit. It appears on the start card and in "show my stats".
 
 Readiness is the share of design decisions you can explain in your own words; `[approved]` (you only agreed with Claude's guess) counts half. "Show my stats" prints the table of past PRs and the lenses you keep stumbling on; the next Brief leads with questions from those lenses. Past `PR_QA.md` files stay under `.pr-grill/<branch>/` until you delete them.
 
