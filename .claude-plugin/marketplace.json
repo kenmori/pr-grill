@@ -1,0 +1,15 @@
+{
+  "name": "pr-grill",
+  "description": "The pr-grill skill for Claude Code: get ready to defend your own pull request.",
+  "owner": {
+    "name": "kenmori",
+    "url": "https://github.com/kenmori"
+  },
+  "plugins": [
+    {
+      "name": "pr-grill",
+      "source": "./",
+      "description": "For PR authors: understand your own change well enough to defend it. Brief, Grill, Drill, Reply and Revise modes; readiness record per repo."
+    }
+  ]
+}

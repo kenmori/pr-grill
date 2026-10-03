@@ -72,6 +72,15 @@ Extra checks in Brief: accountability check for AI-generated hunks ("what breaks
 
 ## Install
 
+As a Claude Code plugin (recommended; updates with `/plugin update`):
+
+```
+/plugin marketplace add kenmori/pr-grill
+/plugin install pr-grill@pr-grill
+```
+
+With the skills CLI:
+
 ```bash
 npx skills add kenmori/pr-grill
 ```

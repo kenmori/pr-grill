@@ -81,6 +81,15 @@ Briefの独自チェックは次のとおりです。AI生成コードの説明�
 
 ## インストール
 
+Claude Codeのプラグインとして入れる方法(推奨。`/plugin update`で更新できます)。
+
+```
+/plugin marketplace add kenmori/pr-grill
+/plugin install pr-grill@pr-grill
+```
+
+skills CLIで入れる方法。
+
 ```bash
 npx skills add kenmori/pr-grill
 ```
