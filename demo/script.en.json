@@ -5,16 +5,6 @@
       "events": [
         {
           "in": "I want to understand my change before I open the PR"
-        },
-        {
-          "out": [
-            [
-              [
-                "Treating you as: wrote with AI, some history here — say so if wrong.",
-                "dim"
-              ]
-            ]
-          ]
         }
       ]
     },
@@ -34,6 +24,50 @@
               [
                 "  4 files, 61 diff lines",
                 ""
+              ]
+            ]
+          ]
+        },
+        {
+          "out": [
+            [
+              [
+                "╔═══ pr-grill ═══════════════════════════════════════╗",
+                "meter"
+              ]
+            ],
+            [
+              [
+                "║  feature/rename            wrote=ai · knows=some   ║",
+                "meter"
+              ]
+            ],
+            [
+              [
+                "║  Readiness ░░░░░░░░░░  0%      last PR: 85%        ║",
+                "meter"
+              ]
+            ],
+            [
+              [
+                "║  Regular ★ · 3 PR(s) on record · weak lately: ops  ║",
+                "meter"
+              ]
+            ],
+            [
+              [
+                "╚════════════════════════════════════════════════════╝",
+                "meter"
+              ]
+            ]
+          ]
+        },
+        {
+          "out": [
+            [
+              [
+                "Treating you as: wrote with AI, some history here — say so if wrong.",
+                "dim"
               ]
             ],
             [

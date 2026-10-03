@@ -77,7 +77,7 @@ must follow — it does not yet.
 ```
 
 ### A question carries its evidence
-The author should never have to open a file to understand what is being asked. Every question block has three parts, in this order, and nothing else:
+The author should never have to open a file to understand what is being asked. Every question block has three parts, in this order (plus the `Suggested:` line on the nodes that allow one, after the question):
 1. **The hunk** (≤ 12 lines) when the node is about a change.
 2. **One or two lines of context the answer needs**, chosen by the kind of question:
    - what the code does / what a reader believes → `called by: src/caller.ts:1 (still imports oldName)`

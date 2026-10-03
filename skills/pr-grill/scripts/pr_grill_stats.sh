@@ -10,12 +10,15 @@
 #                                                               print only the meter line
 #   pr_grill_stats.sh list [--last N]                             table of past PRs + weak-lens trend
 #   pr_grill_stats.sh weak                                        just the weak-lens trend (for the collector)
+#   pr_grill_stats.sh banner --branch B [--profile "wrote=ai · knows=some"]
+#                                                               start card: branch, profile, last readiness, weak lenses
+#                                                               (one line instead of a box when the terminal is < 60 columns)
 #
 # Storage: $PR_GRILL_STATS_DIR/stats.log, default <repo>/.pr-grill (git-ignored by the collector).
 # Readiness = (code + author + approved/2) / nodes. [approved] counts half: agreed with, not said in own words.
 set -uo pipefail
 
-usage() { sed -n '2,14p' "$0" | sed 's/^# \{0,1\}//'; }
+usage() { sed -n '2,17p' "$0" | sed 's/^# \{0,1\}//'; }
 
 STATS_DIR="${PR_GRILL_STATS_DIR:-${PR_GRILL_DIR:-}}"
 if [ -z "$STATS_DIR" ]; then
@@ -25,7 +28,7 @@ fi
 LOG="$STATS_DIR/stats.log"
 
 CMD="${1:-}"; [ $# -gt 0 ] && shift
-BRANCH=""; PRNUM=""; NODES=""; CODE=0; AUTHOR=0; APPROVED=0; OPEN=0; DRILL=""; DIFF=""; STUMBLED=""; ROUNDS=1; LAST=10; LEVEL=""
+BRANCH=""; PRNUM=""; NODES=""; CODE=0; AUTHOR=0; APPROVED=0; OPEN=0; DRILL=""; DIFF=""; STUMBLED=""; ROUNDS=1; LAST=10; LEVEL=""; PROFILE=""
 while [ $# -gt 0 ]; do
   case "$1" in
     --branch) BRANCH="$2"; shift 2 ;;     --pr) PRNUM="$2"; shift 2 ;;
@@ -35,6 +38,7 @@ while [ $# -gt 0 ]; do
     --difficulty) DIFF="$2"; shift 2 ;;   --stumbled) STUMBLED="$2"; shift 2 ;;
     --rounds) ROUNDS="$2"; shift 2 ;;     --last) LAST="$2"; shift 2 ;;
     --level) LEVEL="$2"; shift 2 ;;
+    --profile) PROFILE="$2"; shift 2 ;;
     -h|--help) usage; exit 0 ;;
     *) echo "ERROR: unknown argument: $1" >&2; usage >&2; exit 2 ;;
   esac
@@ -88,6 +92,22 @@ weak_trend() {
     | awk '$1 >= 2 { printf "%s (%d of last 3)\n", $2, $1 }'
 }
 
+# Rank from how many PRs are on record; a ★ when the last five average 85% readiness or better.
+# Counting battles, not scores, is deliberate: showing up is what builds the habit.
+rank_of() {
+  local n="$1" r avg
+  if   [ "$n" -ge 25 ]; then r="Master"
+  elif [ "$n" -ge 12 ]; then r="Senior"
+  elif [ "$n" -ge 6 ];  then r="Veteran"
+  elif [ "$n" -ge 3 ];  then r="Regular"
+  else r="Rookie"; fi
+  if [ -f "$LOG" ] && [ "$n" -ge 3 ]; then
+    avg=$(tail -5 "$LOG" | sed -n 's/.*readiness=\([0-9]*\).*/\1/p' | awk '{ s += $1; c++ } END { if (c) printf "%d", s / c; else print 0 }')
+    [ "${avg:-0}" -ge 85 ] && r="$r ★"
+  fi
+  printf '%s' "$r"
+}
+
 case "$CMD" in
   record)
     [ -n "$BRANCH" ] || { echo "ERROR: --branch is required" >&2; exit 2; }
@@ -120,10 +140,40 @@ case "$CMD" in
       echo; echo "Weak lenses (stumbled in 2+ of the last 3 PRs): $(printf '%s' "$W" | tr '\n' ';' | sed 's/;$//; s/;/; /g')"
       echo "Next Brief should lead with questions from these lenses."
     fi
-    echo; echo "Past Q&A files: $STATS_DIR/<branch>/PR_QA.md (kept until you delete the directory)"
+    echo; echo "Rank: $(rank_of "$(grep -c . "$LOG")")  (Rookie < 3 PRs · Regular 3+ · Veteran 6+ · Senior 12+ · Master 25+; ★ = last five average 85%+)"
+    echo "Past Q&A files: $STATS_DIR/<branch>/PR_QA.md (kept until you delete the directory)"
     ;;
   weak)
     weak_trend
+    ;;
+  banner)
+    [ -n "$BRANCH" ] || { echo "ERROR: --branch is required" >&2; exit 2; }
+    # pad to N display columns: the box-drawing, bar and arrow glyphs are multibyte but one column wide,
+    # so count them as one byte each before measuring (bash substitution is bytewise, which is what we want)
+    pad() { local s="$1" n="$2" t; t=${s//█/x}; t=${t//░/x}; t=${t//←/x}; t=${t//·/x}; t=${t//═/x}; t=${t//★/x}
+            printf '%s' "$s"; local i=${#t}; while [ "$i" -lt "$n" ]; do printf ' '; i=$((i + 1)); done; }
+    rep() { local i=0; while [ "$i" -lt "$2" ]; do printf '%s' "$1"; i=$((i + 1)); done; }
+    LASTPCT=""; COUNT=0
+    if [ -f "$LOG" ]; then
+      COUNT=$(grep -c . "$LOG")
+      LASTPCT=$(tail -1 "$LOG" | sed -n 's/.*readiness=\([^ ]*\).*/\1/p'); [ "$LASTPCT" = "-" ] && LASTPCT=""
+    fi
+    W=$(weak_trend | sed 's/ (.*//' | tr '\n' ',' | sed 's/,$//; s/,/, /g')
+    RANK=$(rank_of "$COUNT")
+    COLS="${COLUMNS:-$(tput cols 2>/dev/null || echo 80)}"
+    B=$(printf '%.26s' "$BRANCH")
+    if [ "$COLS" -lt 60 ]; then
+      # narrow terminal or CI log: one line
+      printf '🔥 pr-grill · %s%s · %s · Readiness %s 0%%%s%s\n' "$B" "${PROFILE:+ · $PROFILE}" "$RANK" "$(bar 0)" "${LASTPCT:+ · last $LASTPCT%}" "${W:+ · weak: $W}"
+    else
+      # start card, 50 columns inside the frame
+      line() { printf '║  '; pad "$1" 50; printf '  ║\n'; }
+      printf '╔═══ pr-grill ═══%s╗\n' "$(rep '═' 38)"
+      line "$(pad "$B" 26)  ${PROFILE:-}"
+      line "Readiness $(bar 0)  0%${LASTPCT:+    last PR: $LASTPCT%}"
+      line "$RANK · $COUNT PR(s) on record${W:+ · weak lately: $W}"
+      printf '╚%s╝\n' "$(rep '═' 54)"
+    fi
     ;;
   ''|-h|--help) usage ;;
   *) echo "ERROR: unknown command: $CMD" >&2; usage >&2; exit 2 ;;
