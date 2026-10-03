@@ -228,7 +228,21 @@
             ],
             [
               [
-                "      What does this function actually do, and what did oldName make a reader expect that is false?",
+                "      called by: ",
+                "dim"
+              ],
+              [
+                "src/caller.ts:1",
+                "head"
+              ],
+              [
+                "  (still imports oldName)",
+                "dim"
+              ]
+            ],
+            [
+              [
+                "      What does this function do, and what did oldName make a reader expect?",
                 "q"
               ]
             ]
@@ -251,16 +265,44 @@
               [
                 "src/lib.ts:1 (1-3)",
                 "head"
+              ]
+            ],
+            [
+              [
+                "      -export function oldName(a) {",
+                "warn"
+              ]
+            ],
+            [
+              [
+                "      +export function newName(a) {",
+                "ok"
+              ]
+            ],
+            [
+              [
+                "      called by: ",
+                "dim"
               ],
               [
-                "   What does this function actually do, and what did oldName make a reader expect that is false?",
+                "src/caller.ts:1",
+                "head"
+              ],
+              [
+                "  (still imports oldName)",
+                "dim"
+              ]
+            ],
+            [
+              [
+                "      What does this function do, and what did oldName make a reader expect?",
                 "q"
               ]
             ]
           ]
         },
         {
-          "in": "It only returns its argument, but oldName read as a transformation; on-call misread a log that way last week (INC-212)."
+          "in": "It only returns its argument; oldName read like a transformation (INC-212 misread)."
         },
         {
           "out": [
@@ -270,7 +312,13 @@
                 "ok"
               ],
               [
-                "  specific: yes (INC-212) · consistent: yes · missing: which caller depends on the new name",
+                "  specific: yes (INC-212) · consistent: yes",
+                "dim"
+              ]
+            ],
+            [
+              [
+                "   missing: which caller depends on the new name",
                 "dim"
               ]
             ],
@@ -286,10 +334,18 @@
                 "meter"
               ],
               [
-                "  model answer written to PR_QA.md",
+                "   model answer → PR_QA.md",
                 "dim"
               ]
-            ],
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "events": [
+        {
+          "out": [
             [
               [
                 "Q2/7  ",
@@ -298,16 +354,40 @@
               [
                 "src/lib.ts:1",
                 "head"
+              ]
+            ],
+            [
+              [
+                "      callers: ",
+                "dim"
               ],
               [
-                "   What does done mean here? Which callers did you leave out of scope?",
+                "src/caller.ts:1",
+                "head"
+              ],
+              [
+                "  ·  ",
+                "dim"
+              ],
+              [
+                "cli/main.ts:40",
+                "head"
+              ],
+              [
+                "  ← outside diff",
+                "warn"
+              ]
+            ],
+            [
+              [
+                "      What does \"done\" mean here? Which callers stay on oldName for now?",
                 "q"
               ]
             ]
           ]
         },
         {
-          "in": "Only lib.ts and its callers. The CLI keeps the old name until v3."
+          "in": "Only lib.ts and its direct callers. The CLI keeps oldName until v3."
         },
         {
           "out": [
@@ -329,9 +409,23 @@
               [
                 "src/lib.ts:1",
                 "head"
-              ],
+              ]
+            ],
+            [
               [
-                "   Why rename, instead of keeping oldName as a deprecated alias?",
+                "      rename:  oldName gone   → every caller changes now",
+                "dim"
+              ]
+            ],
+            [
+              [
+                "      alias:   oldName stays  → callers migrate later; two names meanwhile",
+                "dim"
+              ]
+            ],
+            [
+              [
+                "      Why rename, rather than keep oldName as a deprecated alias?",
                 "q"
               ]
             ],
