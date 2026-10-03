@@ -31,3 +31,14 @@
 ## 30-second explanation
 
 ## ❓ Questions for the author (root of the decision tree first)
+
+## Review round <n> (Revise; since <sha>)
+### Threads → fixes
+| Thread | Delta | Status | Author's reason (what was wrong / why this fixes it) |
+|---|---|---|---|
+### Unprompted changes
+### Open threads (fix or reply still owed)
+### Invalidated earlier answers
+### Unexecuted checks for the delta
+### Re-review summary (for the reviewer)
+### Reply drafts (per thread)

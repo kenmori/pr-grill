@@ -28,6 +28,7 @@ Labels are rendered in whatever language you talk to Claude in. That separation 
 | **Grill** | "grill me", "dig into the intent" | Resolves every `[ask author]` along a decision tree, one question per turn, root first (inspired by [grill-me](https://github.com/mattpocock/skills)) |
 | **Drill** | "quiz me", "test my understanding" | Oral exam: questions one at a time, graded against the code, weak spots listed |
 | **Reply** | paste a review comment | Classifies each comment and drafts a reply with evidence — including when the reviewer is wrong |
+| **Revise** | "I pushed the fixes", "ready for re-review?" | Looks only at what changed since the review (`--since`), maps each fix to its thread (`--pr`), asks "what was wrong / why does this fix it" per fix, and drafts the re-review summary |
 
 Extra checks in Brief: accountability check for AI-generated hunks ("what breaks without this line?"), revert thought experiment, rejected-alternatives ledger, 3 a.m. incident test, PR description vs. diff consistency, unintended promises, unexecuted CI checks, reviewer prediction from CODEOWNERS.
 
@@ -61,8 +62,10 @@ The output directory is ignored by git but stays on disk, and `full.diff` / `dif
 You can also run the collector yourself:
 
 ```bash
-skills/pr-grill/scripts/collect_pr_context.sh [--out DIR] [--no-diff] [--stdout] [base-branch]
+skills/pr-grill/scripts/collect_pr_context.sh [--out DIR] [--no-diff] [--stdout] [--since REF|last] [--pr N] [base-branch]
 ```
+
+`--since` switches to review-round mode: every section covers only the commits since `REF` (or since the previous run, with `last`). `--pr N` adds, when `gh` is installed, each review thread on the PR and whether the diff touches it.
 
 It reports base freshness, untracked files, excluded generated files, test changes, CODEOWNERS, suspicious additions and secret-shaped values with `file:line`, changed signatures, callers **outside the diff** (the ones you forgot to update), repo review conventions, and the checks reviewers will ask whether you ran. Large diffs are split per file under `diff/`.
 
