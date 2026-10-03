@@ -318,6 +318,43 @@ done | pipe "(none)"
 [ "$IDS_TOTAL" -gt 25 ] && out "… $((IDS_TOTAL - 25)) more identifiers omitted ($OUT/identifiers.txt)"
 
 # ---- repository conventions and checks ---------------------------------------------
+# ---- hunk index with links (for the Change notes) -------------------------------
+# GitHub "Files changed" anchors are #diff-<sha256 of the path>R<new-side line>; blob permalinks need only HEAD.
+sha256_hex() { if command -v sha256sum >/dev/null 2>&1; then sha256sum | cut -c1-64; else shasum -a 256 | cut -c1-64; fi; }
+REMOTE=$(git remote get-url origin 2>/dev/null || true)
+GH_REPO=""
+case "$REMOTE" in
+  git@github.com:*)   GH_REPO="${REMOTE#git@github.com:}" ;;
+  https://github.com/*) GH_REPO="${REMOTE#https://github.com/}" ;;
+  ssh://git@github.com/*) GH_REPO="${REMOTE#ssh://git@github.com/}" ;;
+esac
+GH_REPO="${GH_REPO%.git}"; GH_REPO="${GH_REPO%/}"
+HEAD_SHA=$(git rev-parse HEAD)
+section "Hunks (new-side lines; pick the ~5 that matter for the Change notes)"
+if [ -n "$GH_REPO" ]; then
+  out "Link base: https://github.com/$GH_REPO  (PR anchors need --pr N; blob permalinks use HEAD ${HEAD_SHA:0:8})"
+else
+  out "(origin is not on github.com: no links, path:line only)"
+fi
+git diff -M -U0 "$MB" -- . "${EXCLUDE[@]}" | awk '
+  /^\+\+\+ / { f = $0; sub(/^\+\+\+ b\//, "", f); next }
+  /^@@/ { m = $0; sub(/^@@ -[0-9]*(,[0-9]*)? \+/, "", m); sub(/ .*/, "", m); split(m, p, ","); n = p[1] + 0; c = (p[2] == "") ? 1 : p[2] + 0
+          if (c == 0) print f "\t" n "\t" n "\tdeleted"; else print f "\t" n "\t" (n + c - 1) "\tchanged" }
+' > "$OUT/hunks.tsv"
+HUNK_TOTAL=$(wc -l < "$OUT/hunks.tsv" | tr -d ' ')
+head -60 "$OUT/hunks.tsv" | while IFS="$(printf '\t')" read -r hf hs he hk; do
+  [ -z "$hf" ] && continue
+  if [ "$hs" = "$he" ]; then range="$hs"; lr="L$hs"; else range="$hs-$he"; lr="L$hs-L$he"; fi
+  line="- $hf:$range ($hk)"
+  if [ -n "$GH_REPO" ]; then
+    anchor=$(printf '%s' "$hf" | sha256_hex)
+    line="$line  blob: https://github.com/$GH_REPO/blob/$HEAD_SHA/$hf#$lr"
+    [ -n "$PR" ] && line="$line  pr: https://github.com/$GH_REPO/pull/$PR/files#diff-${anchor}R$hs"
+  fi
+  echo "$line"
+done | pipe "(no hunks)"
+[ "$HUNK_TOTAL" -gt 60 ] && out "… $((HUNK_TOTAL - 60)) more hunks in $OUT/hunks.tsv"
+
 # ---- review threads vs. the diff (--pr) ---------------------------------------
 if [ -n "$PR" ]; then
   section "Review threads on PR #$PR vs. this diff (thread roots only; 'touched' = the diff edits within 3 lines of the comment)"

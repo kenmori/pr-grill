@@ -160,6 +160,17 @@ bash "$SCRIPT" --since last main > /dev/null 2>"$TMP/nostate.err"
 yes "--since last without a state file explains"   grep -q 'needs a previous run' "$TMP/nostate.err"
 OUT="$OUTDIR/summary.md"
 
+echo "# hunk index and GitHub links"
+git remote add origin git@github.com:acme/widgets.git
+bash "$SCRIPT" --pr 7 main > "$TMP/hunks.txt" 2>&1
+if command -v sha256sum >/dev/null 2>&1; then ANCHOR=$(printf '%s' "src/lib.ts" | sha256sum | cut -c1-64); else ANCHOR=$(printf '%s' "src/lib.ts" | shasum -a 256 | cut -c1-64); fi
+yes "hunk line with new-side range"                 grep -q '^- src/lib\.ts:1-3 (changed)' "$TMP/hunks.txt"
+yes "blob permalink at HEAD"                        grep -q "blob: https://github.com/acme/widgets/blob/$(git rev-parse HEAD)/src/lib.ts#L1-L3" "$TMP/hunks.txt"
+yes "PR files-changed anchor is sha256 of the path" grep -q "pr: https://github.com/acme/widgets/pull/7/files#diff-${ANCHOR}R1" "$TMP/hunks.txt"
+git remote remove origin
+bash "$SCRIPT" main > "$TMP/nolinks.txt" 2>&1
+yes "without a github remote: path:line only"       grep -q 'origin is not on github.com' "$TMP/nolinks.txt"
+
 echo "# inferred author profile"
 bash "$SCRIPT" main > "$TMP/prof.txt" 2>&1
 yes "profile: wrote=self when every branch commit is the user's" grep -q '^wrote=self' "$TMP/prof.txt"

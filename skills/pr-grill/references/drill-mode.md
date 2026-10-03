@@ -30,6 +30,19 @@ Test how well the author actually understands the change and find what they cann
    - If the author could not answer because the code itself is hard to read, list it as a comment/refactor candidate inside the PR.
    - Record the result: `scripts/pr_grill_stats.sh record --branch <branch> --drill PERFECT/PARTIAL/WRONG --difficulty <level> --stumbled <lens ids>` plus the node counts if a Grill already ran (otherwise `--nodes 0 --code 0 --author 0 --approved 0 --open 0`). Only fact questions count toward the score.
 
+## Multiple choice (3 or 5 options)
+On request ("multiple choice", "3 options", "5 options"), or mixed in by default for every third fact question:
+- **Only fact questions** can be multiple choice, because the key must be `[code]`. Intent questions stay open.
+- Every option must be something a careful reader of the code could believe; no joke options. Build distractors from real neighbours: the old behaviour, the behaviour of a sibling function, the value one line above, an off-by-one.
+- Exactly one correct option. 3 options for "what does it do / return", 5 for "which caller / which input / which line".
+- Format:
+  ```
+  Q4/8  src/lib.ts:1-3   What does newName([]) return?
+    A) []        B) undefined        C) throws TypeError
+  ```
+- Grade ◎ only when the author also says *why* in one line; a bare letter is ○. Then explain each wrong option with the `path:line` that rules it out.
+- Choice questions count in the Drill score like any fact question.
+
 ## Difficulty
 "Normal" unless the user says otherwise.
 - Easy: what changed.

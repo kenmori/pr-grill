@@ -37,6 +37,10 @@
 - Unexecuted checks:
 - Reviewer prediction (CODEOWNERS / reviewRequests are `[code]`; past authors are `[guess]`):
 
+## Change notes (paste into the PR; the 5 most important hunks, links open the line)
+- [path:lines](link) — what; why (only if `[author]`)
+- and N smaller hunks: <formatting, imports, …>
+
 ## 30-second explanation
 
 ## ❓ Questions for the author (root of the decision tree first)

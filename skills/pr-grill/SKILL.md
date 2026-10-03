@@ -33,7 +33,7 @@ Choose from what the user said. If unclear, run Brief and offer the other modes 
 |---|---|---|
 | Brief (default) | "I want to understand my change", "check this before I open the PR" | Run Steps 1–5 and write `PR_QA.md`. End by asking whether to Grill. |
 | Grill (surface intent) | "grill me", "dig into the intent" | Read `references/grill-mode.md`. Resolve `[ask author]` items one per turn, in decision-tree order. |
-| Drill (oral exam) | "quiz me", "test my understanding" | Read `references/drill-mode.md`. |
+| Drill (oral exam) | "quiz me", "test my understanding", "give me multiple choice" | Read `references/drill-mode.md`. Open questions by default; 3–5-option choice questions on request or mixed in. |
 | Reply (review responses) | review comments pasted / a review landed on the PR | Read `references/reply-mode.md`. |
 | Revise (after pushing fixes) | "I pushed the fixes", "I addressed the review", "ready for re-review?" | Read `references/revise-mode.md`. Only the delta since the review; two questions per fix; re-review summary. |
 | Stats | "show my stats", "how did I do last time?" | Run `scripts/pr_grill_stats.sh list` and show the table as is. Offer to open a past `PR_QA.md`. |
@@ -114,6 +114,9 @@ Only the ones that apply.
 ### Step 5: output
 Write `.claude/pr-grill/<branch>/PR_QA.md` using the structure in `assets/PR_QA_template.md` (same place as summary.md; not committed). Tell the user where it is.
 Finish with the count of `[ask author]` items and **only the first question** — the root of the decision tree — and ask whether to Grill. Never dump the whole list at once (batched questions get shallow answers).
+
+### Change notes (Markdown the author can paste into the PR)
+From the collector's "Hunks" section, pick **at most 5 hunks**: the essential changes, ranked by blast radius and risk (a changed signature or contract, a new branch on external input, a deleted check, a changed default, a migration). Write one line per chosen hunk in `PR_QA.md` under "Change notes": `- [path:lines](link) — what this hunk does` + `; why` when the reason is `[author]` (never a guessed why). Close with one line for the rest: `- and N smaller hunks: formatting, import order, renamed test fixtures`. Use the `pr:` link when `--pr N` was given (it opens the line in the PR's Files changed view), else the `blob:` permalink, else plain `path:line`. Keep each line under ~100 characters. The author pastes the block into the PR description or drops single lines as review-comment answers.
 
 ### Readiness and the battle record
 The first line of `PR_QA.md` is the readiness meter. Produce it with `scripts/pr_grill_stats.sh meter --nodes N --code N --author N --approved N --open N`, where N counts the decision-tree nodes (Grill section 1): `code` settled from code, `author` answered in the author's words, `approved` agreed-with only, `open` still `[ask author]`. Refresh it at every Grill checkpoint.
