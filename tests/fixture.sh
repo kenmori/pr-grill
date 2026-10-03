@@ -39,7 +39,7 @@ git checkout -q -b feature/rename
 # 1. rename a function without updating its caller (src/caller.ts)
 sed -i.bak 's/oldName/newName/' src/lib.ts && rm src/lib.ts.bak
 # 2. stray console.log and secrets, in a source file whose name contains "lock"
-printf 'console.log("dbg")\nconst apiKey = "sk-abcdefghijklmnopqrstuvwxyz"\nconst token = "hardcoded-token"\nexport const tick = () => 2\n' > src/clock.ts
+printf 'console.log("dbg")\nconst apiKey = "sk-abcdefghijklmnopqrstuvwxyz"\nconst token = "hardcoded-token"\nconst jwt = "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxIn0.sig"\nexport const tick = () => 2\n' > src/clock.ts
 # 3. code that merely contains the word "token" (not a secret)
 printf 'export const tokenize = (s: string) => s.split(" ")\n' > src/tokenizer.ts
 # 4. nested dist and a lockfile (must be excluded)
@@ -65,6 +65,8 @@ yes "sk- shaped key detected and masked"                      in_section "Secret
 no  "sk- key value is not echoed"                             in_section "Secret-shaped values" 'sk-abcdefghij'
 yes "token = \"literal\" detected and masked"                 in_section "Secret-shaped values" '^src/clock\.ts:3: .*"hard…\[masked\]"'
 no  "token value is not echoed"                               in_section "Secret-shaped values" 'hardcoded-token'
+yes "JWT detected and masked"                                 in_section "Secret-shaped values" '^src/clock\.ts:4: .*"eyJh…\[masked\]"'
+no  "JWT value is not echoed"                                 in_section "Secret-shaped values" 'eyJzdWIiOiIxIn0'
 yes "missing test changes called out"                        in_out 'no test changes'
 yes "untracked file listed"                                   in_section "Untracked files" '^src/brand_new\.ts$'
 yes "CODEOWNERS approximate match (last wins)"                in_section "CODEOWNERS" '^- src/lib\.ts → @team-src'
