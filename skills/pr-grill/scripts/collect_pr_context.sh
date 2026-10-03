@@ -2,7 +2,7 @@
 # Collect PR context using git only (no extra installs; works on bash 3.2 / BSD grep).
 #
 # Usage: collect_pr_context.sh [options] [base-branch]
-#   --out DIR    output directory (default: <repo>/.claude/pr-grill/<branch>)
+#   --out DIR    output directory (default: <repo>/.pr-grill/<branch>)
 #   --no-diff    do not write per-file patches (diff/*.patch)
 #   --stdout     always print the full diff to stdout (default: only when <= 300 lines)
 #   --since REF  review-round mode: diff from REF (a commit, or "last" = the HEAD recorded by the
@@ -73,7 +73,7 @@ HEAD_NAME=$(git rev-parse --abbrev-ref HEAD)
 
 # ---- output directory -----------------------------------------------------
 SLUG=$(printf '%s' "$HEAD_NAME" | sed 's#/#__#g')
-[ -z "$OUT" ] && OUT="$ROOT/.claude/pr-grill/$SLUG"
+[ -z "$OUT" ] && OUT="${PR_GRILL_DIR:-$ROOT/.pr-grill}/$SLUG"   # PR_GRILL_DIR moves all output (and the stats log) elsewhere
 
 # ---- review-round mode (--since) ------------------------------------------------
 # The diff base becomes the reviewed commit, so every section below describes only what changed
@@ -110,11 +110,11 @@ SUMMARY="$OUT/summary.md"
 # --git-path resolves correctly inside a linked worktree, where $ROOT/.git is a file, not a directory.
 EXCL_WARN=""
 case "$OUT" in
-  "$ROOT/.claude/pr-grill"*)
+  "$ROOT/.pr-grill"*)   # only the in-repo default needs git-ignoring
     EXCL=$(git rev-parse --git-path info/exclude)
-    if ! grep -qs '^\.claude/pr-grill/$' "$EXCL" 2>/dev/null; then
-      if ! { mkdir -p "$(dirname "$EXCL")" && echo '.claude/pr-grill/' >> "$EXCL"; } 2>/dev/null; then
-        EXCL_WARN="⚠ Could not write $EXCL. The output directory .claude/pr-grill/ is NOT git-ignored; do not commit it."
+    if ! grep -qs '^\.pr-grill/$' "$EXCL" 2>/dev/null; then
+      if ! { mkdir -p "$(dirname "$EXCL")" && echo '.pr-grill/' >> "$EXCL"; } 2>/dev/null; then
+        EXCL_WARN="⚠ Could not write $EXCL. The output directory .pr-grill/ is NOT git-ignored; do not commit it."
       fi
     fi ;;
 esac
@@ -170,9 +170,10 @@ fi
 [ -n "$EXCL_WARN" ] && out "$EXCL_WARN"
 # Past battles in this repo: lenses the author stumbled on recently come first in the Q&A
 STATS_SH="$(dirname "$0")/pr_grill_stats.sh"
-if [ -x "$STATS_SH" ] && [ -f "$ROOT/.claude/pr-grill/stats.log" ]; then
-  WEAK=$(PR_GRILL_STATS_DIR="$ROOT/.claude/pr-grill" "$STATS_SH" weak | tr '\n' ';' | sed 's/;$//; s/;/; /g')
-  out "Past PRs in this repo: $(grep -c . "$ROOT/.claude/pr-grill/stats.log")${WEAK:+  weak lenses lately: $WEAK  <- lead the Q&A with these}"
+STATS_DIR_EFF="${PR_GRILL_DIR:-$ROOT/.pr-grill}"
+if [ -x "$STATS_SH" ] && [ -f "$STATS_DIR_EFF/stats.log" ]; then
+  WEAK=$(PR_GRILL_STATS_DIR="$STATS_DIR_EFF" "$STATS_SH" weak | tr '\n' ';' | sed 's/;$//; s/;/; /g')
+  out "Past PRs in this repo: $(grep -c . "$STATS_DIR_EFF/stats.log")${WEAK:+  weak lenses lately: $WEAK  <- lead the Q&A with these}"
 fi
 DIFF_LINES=$(git diff -M "$MB" -- . "${EXCLUDE[@]}" | wc -l | tr -d ' ')
 N_FILES=$(printf '%s\n' "$CHANGED" | grep -c .)

@@ -11,16 +11,16 @@
 #   pr_grill_stats.sh list [--last N]                             table of past PRs + weak-lens trend
 #   pr_grill_stats.sh weak                                        just the weak-lens trend (for the collector)
 #
-# Storage: $PR_GRILL_STATS_DIR/stats.log, default <repo>/.claude/pr-grill (git-ignored by the collector).
+# Storage: $PR_GRILL_STATS_DIR/stats.log, default <repo>/.pr-grill (git-ignored by the collector).
 # Readiness = (code + author + approved/2) / nodes. [approved] counts half: agreed with, not said in own words.
 set -uo pipefail
 
 usage() { sed -n '2,14p' "$0" | sed 's/^# \{0,1\}//'; }
 
-STATS_DIR="${PR_GRILL_STATS_DIR:-}"
+STATS_DIR="${PR_GRILL_STATS_DIR:-${PR_GRILL_DIR:-}}"
 if [ -z "$STATS_DIR" ]; then
-  ROOT=$(git rev-parse --show-toplevel 2>/dev/null) || { echo "ERROR: not in a git repository; set PR_GRILL_STATS_DIR" >&2; exit 1; }
-  STATS_DIR="$ROOT/.claude/pr-grill"
+  ROOT=$(git rev-parse --show-toplevel 2>/dev/null) || { echo "ERROR: not in a git repository; set PR_GRILL_DIR" >&2; exit 1; }
+  STATS_DIR="$ROOT/.pr-grill"
 fi
 LOG="$STATS_DIR/stats.log"
 

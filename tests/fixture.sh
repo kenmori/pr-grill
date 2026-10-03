@@ -54,7 +54,7 @@ echo "# default output directory"
 STDOUT="$TMP/stdout.txt"
 bash "$SCRIPT" main > "$STDOUT" 2>"$TMP/stderr.txt"; CODE=$?
 if [ "$CODE" -eq 0 ]; then ok "exit code 0"; else fail "exit code $CODE"; cat "$TMP/stderr.txt"; fi
-OUTDIR="$REPO/.claude/pr-grill/feature__rename"; OUT="$OUTDIR/summary.md"
+OUTDIR="$REPO/.pr-grill/feature__rename"; OUT="$OUTDIR/summary.md"
 if [ -f "$OUT" ]; then ok "summary.md is written"; else fail "summary.md missing ($OUTDIR)"; exit 1; fi
 yes "stdout matches summary.md" diff -q "$OUT" "$STDOUT"
 
@@ -83,7 +83,7 @@ no  "clock.ts not listed under excluded files"  in_section "Excluded files" 'clo
 no  "tokenizer not flagged as suspicious"       in_section "Suspicious patterns" 'tokenizer'
 no  "tokenizer not flagged as a secret"         in_section "Secret-shaped values" 'tokenizer'
 no  "defining file excluded from callers"       in_section "Caller candidates" '^src/lib\.ts:'
-no  "output dir ignored via .git/info/exclude"  sh -c "cd '$REPO' && git status --short | grep -q '\.claude/pr-grill'"
+no  "output dir ignored via .git/info/exclude"  sh -c "cd '$REPO' && git status --short | grep -q '\.pr-grill'"
 
 echo "# options"
 bash "$SCRIPT" --out "$TMP/custom" --no-diff main > /dev/null 2>&1
@@ -114,7 +114,7 @@ no  "no mkdir error on the .git file"               grep -q 'Not a directory' "$
 # Match on the basename: on macOS $TMP is under /var, which git resolves to /private/var
 yes "header names the worktree and the others"      grep -q "^Worktree: .*/wt \[wt-branch\]" "$TMP/wt.txt"
 yes "header lists the main checkout as other"       grep -q "other: .*\[feature/rename\]" "$TMP/wt.txt"
-no  "output dir is git-ignored in the worktree"     sh -c "cd '$TMP/wt' && git status --short | grep -q '\.claude/pr-grill'"
+no  "output dir is git-ignored in the worktree"     sh -c "cd '$TMP/wt' && git status --short | grep -q '\.pr-grill'"
 git worktree remove --force "$TMP/wt" 2>/dev/null
 
 echo "# shallow clone without a merge-base"
@@ -211,8 +211,8 @@ yes "weak-lens trend finds ops (3 of 3)"    sh -c "printf '%s' '$L' | grep -q 'o
 no  "a lens hit once is not a trend"        sh -c "printf '%s' '$L' | grep -q 'security ('"
 no  "record rejects a bad --drill"          sh -c "bash '$STATS' record --branch b --nodes 1 --code 1 --author 0 --approved 0 --open 0 --drill 5-2 2>/dev/null"
 no  "record requires --branch"              sh -c "bash '$STATS' record --nodes 1 --code 1 --author 0 --approved 0 --open 0 2>/dev/null"
-# the collector surfaces the trend in its header when the log lives in the repo's .claude/pr-grill
-mkdir -p "$REPO/.claude/pr-grill" && cp "$TMP/stats/stats.log" "$REPO/.claude/pr-grill/stats.log"
+# the collector surfaces the trend in its header when the log lives in the repo's .pr-grill
+mkdir -p "$REPO/.pr-grill" && cp "$TMP/stats/stats.log" "$REPO/.pr-grill/stats.log"
 unset PR_GRILL_STATS_DIR
 bash "$SCRIPT" main > "$TMP/hdr.txt" 2>&1
 yes "collector header shows past PRs and weak lenses" grep -q 'Past PRs in this repo: 3  weak lenses lately: ops (3 of last 3)' "$TMP/hdr.txt"
