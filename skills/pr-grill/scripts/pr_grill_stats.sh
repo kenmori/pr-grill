@@ -11,16 +11,16 @@
 #   pr_grill_stats.sh list [--last N]                             table of past PRs + weak-lens trend
 #   pr_grill_stats.sh weak                                        just the weak-lens trend (for the collector)
 #
-# Storage: $PR_GRILL_STATS_DIR/stats.log, default <repo>/.claude/pr-grill (git-ignored by the collector).
+# Storage: $PR_GRILL_STATS_DIR/stats.log, default <repo>/.pr-grill (git-ignored by the collector).
 # Readiness = (code + author + approved/2) / nodes. [approved] counts half: agreed with, not said in own words.
 set -uo pipefail
 
 usage() { sed -n '2,14p' "$0" | sed 's/^# \{0,1\}//'; }
 
-STATS_DIR="${PR_GRILL_STATS_DIR:-}"
+STATS_DIR="${PR_GRILL_STATS_DIR:-${PR_GRILL_DIR:-}}"
 if [ -z "$STATS_DIR" ]; then
-  ROOT=$(git rev-parse --show-toplevel 2>/dev/null) || { echo "ERROR: not in a git repository; set PR_GRILL_STATS_DIR" >&2; exit 1; }
-  STATS_DIR="$ROOT/.claude/pr-grill"
+  ROOT=$(git rev-parse --show-toplevel 2>/dev/null) || { echo "ERROR: not in a git repository; set PR_GRILL_DIR" >&2; exit 1; }
+  STATS_DIR="$ROOT/.pr-grill"
 fi
 LOG="$STATS_DIR/stats.log"
 
@@ -60,8 +60,8 @@ bar() {
 meter_line() {
   local n="$1" c="$2" a="$3" p="$4" o="$5" d="$6" st="$7" pct
   pct=$(readiness "$n" "$c" "$a" "$p")
-  if [ -z "$pct" ]; then printf 'Readiness: (no decision-tree nodes recorded)'; return; fi
-  printf 'Readiness %s %d%%  (code %d · author %d · approved %d · open %d of %d)' "$(bar "$pct")" "$pct" "$c" "$a" "$p" "$o" "$n"
+  if [ -z "$pct" ]; then printf 'Readiness: (no decision-tree nodes recorded)'
+  else printf 'Readiness %s %d%%  (code %d · author %d · approved %d · open %d of %d)' "$(bar "$pct")" "$pct" "$c" "$a" "$p" "$o" "$n"; fi
   [ -n "$d" ] && printf '  Drill %s' "$(printf '%s' "$d" | awk -F/ '{printf "%d/%d", $1, $1+$2+$3}')"
   [ -n "$st" ] && printf '  Stumbled: %s' "$st"
   printf '\n'
@@ -71,15 +71,20 @@ need_counts() {
   for v in "$NODES" "$CODE" "$AUTHOR" "$APPROVED" "$OPEN"; do
     is_int "$v" || { echo "ERROR: --nodes/--code/--author/--approved/--open must be non-negative integers" >&2; exit 2; }
   done
+  if [ $((CODE + AUTHOR + APPROVED + OPEN)) -gt "$NODES" ]; then
+    echo "ERROR: code+author+approved+open ($((CODE + AUTHOR + APPROVED + OPEN))) exceeds --nodes ($NODES)" >&2; exit 2
+  fi
   if [ -n "$DRILL" ] && ! printf '%s' "$DRILL" | grep -Eq '^[0-9]+/[0-9]+/[0-9]+$'; then
     echo "ERROR: --drill must be PERFECT/PARTIAL/WRONG, e.g. 5/2/1" >&2; exit 2
   fi
+  # the log is one key=value line per record; a space in a value would break every reader
+  case "$BRANCH$STUMBLED$DIFF$LEVEL$PRNUM" in *[[:space:]]*) echo "ERROR: --branch/--stumbled/--difficulty/--level/--pr must not contain spaces" >&2; exit 2 ;; esac
 }
 
 # Weak-lens trend over the last 3 records: a lens that appears in 2 or more of them
 weak_trend() {
   [ -f "$LOG" ] || return 0
-  tail -3 "$LOG" | sed -n 's/.*stumbled=\([^ ]*\).*/\1/p' | tr ',' '\n' | grep -v '^$' | sort | uniq -c | sort -rn \
+  tail -3 "$LOG" | sed -n 's/.*stumbled=\([^ ]*\).*/\1/p' | tr ',' '\n' | grep -Ev '^(-)?$' | sort | uniq -c | sort -rn \
     | awk '$1 >= 2 { printf "%s (%d of last 3)\n", $2, $1 }'
 }
 

@@ -70,9 +70,21 @@ Labels are rendered in whatever language you talk to Claude in. That separation 
 | **Grill** | "grill me", "dig into the intent" | Resolves every `[ask author]` along a decision tree, one question per turn, root first (inspired by [grill-me](https://github.com/mattpocock/skills)) |
 | **Drill** | "quiz me", "test my understanding" | Oral exam: questions one at a time, graded against the code, weak spots listed |
 | **Reply** | paste a review comment | Classifies each comment and drafts a reply with evidence — including when the reviewer is wrong |
+| **Describe** | "write my PR description" | Assembles the PR body from what you already said in Brief and Grill; gaps stay marked "fill in"; prints the `pbcopy` and `gh pr create --body-file` lines |
+| **Review brief** | "I'm reviewing PR #N" | For the reviewer side: change map, blast radius, and the questions to ask the author, with no interview |
 | **Revise** | "I pushed the fixes", "ready for re-review?" | Looks only at what changed since the review (`--since`), maps each fix to its thread (`--pr`), asks "what was wrong / why does this fix it" per fix, and drafts the re-review summary |
 
 Extra checks in Brief: accountability check for AI-generated hunks ("what breaks without this line?"), revert thought experiment, rejected-alternatives ledger, 3 a.m. incident test, PR description vs. diff consistency, unintended promises, unexecuted CI checks, reviewer prediction from CODEOWNERS.
+
+## Other agents
+
+The skill is in the standard agent-skills layout, so the skills CLI installs it into any of the agents it supports:
+
+```bash
+npx skills add kenmori/pr-grill -a cursor      # or -a codex, -a opencode, -a windsurf, …
+```
+
+Output goes to `.pr-grill/<branch>/` in the repository (git-ignored through `info/exclude`; `PR_GRILL_DIR` moves it). Verified end to end in Claude Code; other agents run the same `scripts/` and read the same `SKILL.md`, but how eagerly each one executes a skill's scripts differs, so check the first run.
 
 ## Install
 
@@ -106,9 +118,9 @@ In any repository, on your feature branch:
 > I want to understand my change before I open the PR
 ```
 
-Claude runs `scripts/collect_pr_context.sh`, writes `.claude/pr-grill/<branch>/PR_QA.md` (automatically git-ignored via the shared `info/exclude`, so it also works inside `git worktree` checkouts), and ends by asking whether to Grill the first unresolved question.
+Claude runs `scripts/collect_pr_context.sh`, writes `.pr-grill/<branch>/PR_QA.md` (automatically git-ignored via the shared `info/exclude`, so it also works inside `git worktree` checkouts), and ends by asking whether to Grill the first unresolved question.
 
-The output directory is ignored by git but stays on disk, and `full.diff` / `diff/*.patch` contain the raw diff. The summary masks secret-shaped values; if the diff itself contains a secret, delete `.claude/pr-grill/` once you have dealt with it.
+The output directory is ignored by git but stays on disk, and `full.diff` / `diff/*.patch` contain the raw diff. The summary masks secret-shaped values; if the diff itself contains a secret, delete `.pr-grill/` once you have dealt with it.
 
 You can also run the collector yourself:
 
@@ -120,15 +132,19 @@ skills/pr-grill/scripts/collect_pr_context.sh [--out DIR] [--no-diff] [--stdout]
 
 It reports base freshness, untracked files, excluded generated files, test changes, CODEOWNERS, suspicious additions and secret-shaped values with `file:line`, changed signatures, callers **outside the diff** (the ones you forgot to update), repo review conventions, and the checks reviewers will ask whether you ran. Large diffs are split per file under `diff/`.
 
+## Diagrams
+
+When a call chain, data flow or state sequence changed, or two options are being compared, Brief also writes `.pr-grill/<branch>/diagram.html`: a before/after figure in self-contained inline SVG (no libraries, works offline, light and dark), with `path:line` under each node and a one-sentence caption stating the claim. The terminal prints a `file://` link; in Claude Code it can also be published as a private page. If a sentence says it faster, no diagram is drawn.
+
 ## Your record
 
-Every Grill, Drill or Revise session ends with a line in `.claude/pr-grill/stats.log` (git-ignored, per repository):
+Every Grill, Drill or Revise session ends with a line in `.pr-grill/stats.log` (git-ignored, per repository):
 
 ```
 Readiness ████████░░ 85%  (code 4 · author 4 · approved 1 · open 1 of 10)  Drill 5/8  Stumbled: ops, tests
 ```
 
-Readiness is the share of design decisions you can explain in your own words; `[approved]` (you only agreed with Claude's guess) counts half. "Show my stats" prints the table of past PRs and the lenses you keep stumbling on; the next Brief leads with questions from those lenses. Past `PR_QA.md` files stay under `.claude/pr-grill/<branch>/` until you delete them.
+Readiness is the share of design decisions you can explain in your own words; `[approved]` (you only agreed with Claude's guess) counts half. "Show my stats" prints the table of past PRs and the lenses you keep stumbling on; the next Brief leads with questions from those lenses. Past `PR_QA.md` files stay under `.pr-grill/<branch>/` until you delete them.
 
 ## Example
 

@@ -27,9 +27,9 @@ The five exit-bar items (SKILL.md, Step 0.5) are always in the tree: "what" sits
 Reason: these exist only in the author's head. Showing a plausible reason first invites a reflexive "yes, that" — Claude's fabricated intent then gets the author's stamp on it. That is the exact opposite of the core rule.
 **After** the author answers, if Claude's reading of the code disagrees, say so right there ("the code reads to me like X — is that wrong?").
 
-Format (the hunk first, then the question; `path:line` as its own token so it is clickable):
+Format (the hunk first, then the question; `path:line` with a single line first so the terminal links it, the range in parentheses):
 ```
-**Q<n>/<approx. remaining>**  src/lib.ts:1-3
+**Q<n>/<approx. remaining>**  src/lib.ts:1 (1-3)
 -export function oldName(a) {
 +export function newName(a) {
 What problem does this change solve? What goes wrong if it is not made?
@@ -41,7 +41,7 @@ Individual decisions, edge cases, tests and release may come with a suggested an
 
 Format:
 ```
-**Q<n>/<approx. remaining>**  src/lib.ts:12-18
+**Q<n>/<approx. remaining>**  src/lib.ts:12 (12-18)
 <hunk, ≤ 12 lines, when the node is about a change>
 <question>
 Suggested: <the most plausible answer, with the evidence in a few words>
@@ -71,7 +71,7 @@ Example turn after the author answers "names were inconsistent; on-call misread 
 ```
 Specific: yes (INC-212, the log line). Consistent: yes. Missing: which caller depends on the new promise.
 [code] src/lib.ts:1 returns its argument unchanged; src/caller.ts:1 is the only import and still uses oldName.
-Model answer: `oldName` only echoes its input (src/lib.ts:1-3), but the old name read as a transformation, which
+Model answer: `oldName` only echoes its input (src/lib.ts:1), but the old name read as a transformation, which
 is how on-call misread the log in INC-212 (author). Renamed to `newName`; the single caller src/caller.ts:1
 must follow — it does not yet.
 ```

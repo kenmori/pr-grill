@@ -5,7 +5,7 @@ The author has pushed changes in response to review comments. Fixes written unde
 Triggers: "I pushed the fixes", "I addressed the review", "what changed since the review", "ready for re-review?".
 
 ## 1. Collect the delta, not the whole PR
-1. Load the existing `PR_QA.md` from `.claude/pr-grill/<branch>/`. If there is none, run Brief first; Revise needs the earlier answers to know what the fixes invalidated.
+1. Load the existing `PR_QA.md` from `.pr-grill/<branch>/`. If there is none, run Brief first; Revise needs the earlier answers to know what the fixes invalidated.
 2. Run the collector in review-round mode:
    - `scripts/collect_pr_context.sh --since last` (the HEAD recorded by the previous run), or `--since <sha>` with the commit the reviewer looked at (the PR timeline shows it), when the previous run is older than the review.
    - Add `--pr <number>` when `gh` is available. The summary then lists every review thread with `touched` / `file touched, not at this line` / `file untouched`.
