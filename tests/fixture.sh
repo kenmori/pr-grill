@@ -164,8 +164,9 @@ echo "# hunk index and GitHub links"
 git remote add origin git@github.com:acme/widgets.git
 bash "$SCRIPT" --pr 7 main > "$TMP/hunks.txt" 2>&1
 if command -v sha256sum >/dev/null 2>&1; then ANCHOR=$(printf '%s' "src/lib.ts" | sha256sum | cut -c1-64); else ANCHOR=$(printf '%s' "src/lib.ts" | shasum -a 256 | cut -c1-64); fi
-yes "hunk line with new-side range"                 grep -q '^- src/lib\.ts:1-3 (changed)' "$TMP/hunks.txt"
-yes "blob permalink at HEAD"                        grep -q "blob: https://github.com/acme/widgets/blob/$(git rev-parse HEAD)/src/lib.ts#L1-L3" "$TMP/hunks.txt"
+yes "hunk line with new-side range"                 grep -q '^- src/lib\.ts:1-2 (changed)' "$TMP/hunks.txt"
+yes "blob permalink at HEAD"                        grep -q "blob: https://github.com/acme/widgets/blob/$(git rev-parse HEAD)/src/lib.ts#L1-L2" "$TMP/hunks.txt"
+yes "change-notes budget scales with files"         grep -Eq '^Change notes budget: [0-9]+ \(1 per 3 changed files, min 3, max 10\)' "$TMP/hunks.txt"
 yes "PR files-changed anchor is sha256 of the path" grep -q "pr: https://github.com/acme/widgets/pull/7/files#diff-${ANCHOR}R1" "$TMP/hunks.txt"
 git remote remove origin
 bash "$SCRIPT" main > "$TMP/nolinks.txt" 2>&1

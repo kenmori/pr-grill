@@ -330,7 +330,7 @@ case "$REMOTE" in
 esac
 GH_REPO="${GH_REPO%.git}"; GH_REPO="${GH_REPO%/}"
 HEAD_SHA=$(git rev-parse HEAD)
-section "Hunks (new-side lines; pick the ~5 that matter for the Change notes)"
+section "Hunks (new-side lines; pick the ones that matter for the Change notes, up to the budget below)"
 if [ -n "$GH_REPO" ]; then
   out "Link base: https://github.com/$GH_REPO  (PR anchors need --pr N; blob permalinks use HEAD ${HEAD_SHA:0:8})"
 else
@@ -342,6 +342,10 @@ git diff -M -U0 "$MB" -- . "${EXCLUDE[@]}" | awk '
           if (c == 0) print f "\t" n "\t" n "\tdeleted"; else print f "\t" n "\t" (n + c - 1) "\tchanged" }
 ' > "$OUT/hunks.tsv"
 HUNK_TOTAL=$(wc -l < "$OUT/hunks.tsv" | tr -d ' ')
+# How many Change-notes lines the PR deserves: proportional to the number of changed files, bounded
+BUDGET=$(( (N_FILES + 2) / 3 )); [ "$BUDGET" -lt 3 ] && BUDGET=3; [ "$BUDGET" -gt 10 ] && BUDGET=10
+[ "$HUNK_TOTAL" -lt "$BUDGET" ] && BUDGET="$HUNK_TOTAL"
+out "Change notes budget: $BUDGET (1 per 3 changed files, min 3, max 10) of $HUNK_TOTAL hunks"
 head -60 "$OUT/hunks.tsv" | while IFS="$(printf '\t')" read -r hf hs he hk; do
   [ -z "$hf" ] && continue
   if [ "$hs" = "$he" ]; then range="$hs"; lr="L$hs"; else range="$hs-$he"; lr="L$hs-L$he"; fi
